@@ -120,7 +120,6 @@ fun AppointmentDetailScreen() {
     }
 }
 
-
 @Composable
 fun AppointmentInfoRow(icon: ImageVector, text: String) {
     Row(

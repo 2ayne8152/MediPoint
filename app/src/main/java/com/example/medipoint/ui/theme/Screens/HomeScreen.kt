@@ -31,13 +31,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.medipoint.R
 
-@Preview(showBackground = true)
 @Composable
-fun HomeScreen() {
+fun HomeScreen(
+    onBookAppointmentClick: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -86,10 +86,8 @@ fun HomeScreen() {
                     subtitle = stringResource(R.string.schedule_a_new_visit),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 6.dp)
-                        .clickable(
-                            onClick = {}
-                        )
+                        .padding(top = 6.dp),
+                    onButtonClicked = onBookAppointmentClick
                 )
                 ActionButton(
                     imageVector = Icons.Filled.Place,
@@ -97,7 +95,8 @@ fun HomeScreen() {
                     subtitle = stringResource(R.string.get_directions),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 6.dp)
+                        .padding(bottom = 6.dp),
+                    onButtonClicked = {}
                 )
             }
         }
@@ -151,7 +150,8 @@ fun ActionButton(
     imageVector: ImageVector,
     title: String,
     subtitle: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onButtonClicked: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -159,6 +159,9 @@ fun ActionButton(
                 width = 1.dp,
                 color = Color.LightGray,
                 shape = RoundedCornerShape(12.dp)
+            )
+            .clickable(
+                onClick = onButtonClicked
             ),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White)

@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3Api::class)
 
 package com.example.medipoint
 
@@ -31,11 +31,13 @@ import androidx.navigation.compose.rememberNavController
 import com.example.medipoint.ui.screens.BookingScreen
 import com.example.medipoint.ui.theme.Screens.AppointmentDetailScreen
 import com.example.medipoint.ui.theme.Screens.HomeScreen
+import com.example.medipoint.ui.theme.Screens.ProfileScreen
 
 enum class MedipointScreens {
     HomeScreen,
     BookingScreen,
-    AppointmentDetailScreen
+    AppointmentDetailScreen,
+    ProfileScreen
 }
 
 
@@ -54,7 +56,9 @@ fun MediPointApp() {
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack,
+                            contentDescription = "Back",
+                            tint = Color.White)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -73,13 +77,16 @@ fun MediPointApp() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(route = MedipointScreens.HomeScreen.name) {
-                HomeScreen()
+                HomeScreen( onBookAppointmentClick = {navController.navigate(MedipointScreens.BookingScreen.name) })
             }
             composable(route = MedipointScreens.BookingScreen.name) {
                 BookingScreen()
             }
             composable(route = MedipointScreens.AppointmentDetailScreen.name) {
                 AppointmentDetailScreen()
+            }
+            composable (route = MedipointScreens.ProfileScreen.name) {
+                ProfileScreen()
             }
         }
     }
@@ -111,7 +118,7 @@ fun BottomNavigationBar(navController: NavHostController) {
         )
         NavigationBarItem(
             selected = false,
-            onClick = { /* Navigate Profile */ },
+            onClick = { navController.navigate(MedipointScreens.ProfileScreen.name) },
             icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
             label = { Text("Profile") }
         )
