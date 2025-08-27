@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">MediPoint</string>
+    <string name="get_directions">Get Directions</string>
+    <string name="location_directions"><![CDATA[Location & Directions]]></string>
+    <string name="book_appointment">Book Appointment</string>
+    <string name="schedule_a_new_visit">Schedule a new visit</string>
+    <string name="find_my_doctor">Find My Doctor</string>
+</resources>
