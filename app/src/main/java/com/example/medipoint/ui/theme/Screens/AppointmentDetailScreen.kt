@@ -96,7 +96,11 @@ fun AppointmentDetailScreen(
                         .background(Color(0xFF00C853), shape = RoundedCornerShape(12.dp))
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
-                    Text("Confirmed", color = Color.White, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "Confirmed",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }
@@ -184,7 +188,6 @@ fun AppointmentDetailScreen(
     }
 }
 
-
 @Composable
 fun AppointmentInfoRow(icon: ImageVector, text: String) {
     Row(
@@ -193,16 +196,18 @@ fun AppointmentInfoRow(icon: ImageVector, text: String) {
     ) {
         Icon(icon, contentDescription = null, tint = Color(0xFF0A0A1A))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text,
+        Text(
+            text,
             style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Bold)
+            fontWeight = FontWeight.Bold
+        )
     }
 }
 
 @Composable
 fun DirectionButton(label: String) {
     Button(
-        onClick = { /* Handle directions */ },
+        onClick = { },
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
