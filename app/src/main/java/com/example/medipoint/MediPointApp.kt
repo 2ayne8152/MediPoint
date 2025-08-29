@@ -44,7 +44,7 @@ enum class MedipointScreens {
 
 
 @Composable
-fun MediPointApp() {
+fun MediPointApp(onSignOut: () -> Unit) {
     val navController = rememberNavController()
 
     Scaffold(
@@ -89,7 +89,7 @@ fun MediPointApp() {
                 AppointmentDetailScreen()
             }
             composable (route = MedipointScreens.ProfileScreen.name) {
-                ProfileScreen()
+                ProfileScreen(onSignOut = onSignOut)
             }
         }
     }

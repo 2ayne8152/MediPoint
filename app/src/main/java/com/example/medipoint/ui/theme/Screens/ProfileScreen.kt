@@ -38,7 +38,7 @@ import androidx.compose.ui.unit.sp
 
 @Preview(showBackground = true)
 @Composable
-fun ProfileScreen() {
+fun ProfileScreen(onSignOut: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "799628792552",
+    "project_id": "medipoint-c9d1d",
+    "storage_bucket": "medipoint-c9d1d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:799628792552:android:215dc0d25477e01bc7af5d",
+        "android_client_info": {
+          "package_name": "com.example.medipoint"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAOVSxZvOXOPqBC7Rsw0cI57dzm2bEWkkg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
