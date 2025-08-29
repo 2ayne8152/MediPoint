@@ -1,4 +1,6 @@
-@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3Api::class)
+@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3Api::class
+)
 
 package com.example.medipoint
 
@@ -77,7 +79,8 @@ fun MediPointApp() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(route = MedipointScreens.HomeScreen.name) {
-                HomeScreen( onBookAppointmentClick = {navController.navigate(MedipointScreens.BookingScreen.name) })
+                HomeScreen( onBookAppointmentClick = {navController.navigate(MedipointScreens.BookingScreen.name)},
+                    onDetailClick = {navController.navigate(MedipointScreens.AppointmentDetailScreen.name)})
             }
             composable(route = MedipointScreens.BookingScreen.name) {
                 BookingScreen()

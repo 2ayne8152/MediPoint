@@ -61,4 +61,10 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // Google location services
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+    // Coroutines Task.await() for Play Services
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
+    implementation("com.google.accompanist:accompanist-permissions:0.35.0-alpha")
 }

@@ -36,7 +36,8 @@ import com.example.medipoint.R
 
 @Composable
 fun HomeScreen(
-    onBookAppointmentClick: () -> Unit
+    onBookAppointmentClick: () -> Unit,
+    onDetailClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -126,21 +127,24 @@ fun HomeScreen(
             "Cardiologist",
             "Mon, Jul 28",
             "09:00 AM",
-            Modifier.padding(top = 8.dp)
+            Modifier.padding(top = 8.dp),
+            onDetailClick = onDetailClick
         )
         AppointmentCard(
             "Dr. Smith",
             "Dermatologist",
             "Tue, Jul 29",
             "02:15 PM",
-            Modifier.padding(top = 8.dp)
+            Modifier.padding(top = 8.dp),
+            onDetailClick = onDetailClick
         )
         AppointmentCard(
             "Dr. Williams",
             "Orthopedist",
             "Thu, Jul 31",
             "11:30 AM",
-            Modifier.padding(top = 8.dp)
+            Modifier.padding(top = 8.dp),
+            onDetailClick = onDetailClick
         )
     }
 }
@@ -194,7 +198,8 @@ fun AppointmentCard(
     specialty: String,
     date: String,
     time: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDetailClick: () -> Unit
 ) {
     Card(
         modifier = modifier
@@ -221,7 +226,7 @@ fun AppointmentCard(
                 )
             }
             Button(
-                onClick = {},
+                onClick = onDetailClick ,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.Black,
                     contentColor = Color.White
