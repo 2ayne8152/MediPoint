@@ -3,6 +3,7 @@
 package com.example.medipoint.ui.theme.Screens
 
 import android.Manifest
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -29,12 +30,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -219,6 +222,8 @@ fun CheckInCard(
     viewModel: CheckInViewModel = viewModel(),
     locationPermission: PermissionState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
 ) {
+    val context = LocalContext.current
+
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth(),
@@ -229,38 +234,55 @@ fun CheckInCard(
             modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text( text = stringResource(R.string.check_in),
+            Text(
+                text = stringResource(R.string.check_in),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.align(alignment = Alignment.Start))
+                modifier = Modifier.align(alignment = Alignment.Start)
+            )
             Spacer(modifier = Modifier.height(12.dp))
 
             when (checkInRecord.status) {
-                CheckInStatus.PENDING -> {
-                    Button(onClick = {
-                        if (locationPermission.status.isGranted) {
-                            viewModel.attemptCheckIn()
-                        } else {
-                            locationPermission.launchPermissionRequest()
-                        }
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.Black
-                    )
+                CheckInStatus.PENDING,
+                CheckInStatus.MISSED -> {
+                    // ✅ Button is visible if pending OR failed
+                    Button(
+                        onClick = {
+                            if (locationPermission.status.isGranted) {
+                                viewModel.attemptCheckIn()
+                            } else {
+                                locationPermission.launchPermissionRequest()
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
                     ) {
                         Text("Tap to Check In")
+                    }
+
+                    if (checkInRecord.status == CheckInStatus.MISSED) {
+                        LaunchedEffect(Unit) {
+                            Toast.makeText(
+                                context,
+                                "Check-in Failed!",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
                 }
 
                 CheckInStatus.CHECKED_IN -> {
-                    Text("Checked in at ${checkInRecord.checkedInAt}")
-                }
-
-                CheckInStatus.MISSED -> {
-                    Text("Missed check-in")
+                    // ✅ Button is hidden when successful
+                    Text("Checked in successfully!")
+                    LaunchedEffect(Unit) {
+                        Toast.makeText(
+                            context,
+                            "Checked in successfully!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 }
             }
         }

@@ -22,7 +22,6 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
     private val fusedLocationClient =
         LocationServices.getFusedLocationProviderClient(application)
 
-    // ✅ Backing StateFlow
     private val _checkInRecord = MutableStateFlow(CheckInRecord(status = CheckInStatus.PENDING))
     val checkInRecord: StateFlow<CheckInRecord> = _checkInRecord
 
