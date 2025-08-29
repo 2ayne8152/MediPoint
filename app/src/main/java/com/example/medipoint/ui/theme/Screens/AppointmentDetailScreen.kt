@@ -244,7 +244,6 @@ fun CheckInCard(
             when (checkInRecord.status) {
                 CheckInStatus.PENDING,
                 CheckInStatus.MISSED -> {
-                    // ✅ Button is visible if pending OR failed
                     Button(
                         onClick = {
                             if (locationPermission.status.isGranted) {
@@ -274,7 +273,6 @@ fun CheckInCard(
                 }
 
                 CheckInStatus.CHECKED_IN -> {
-                    // ✅ Button is hidden when successful
                     Text("Checked in successfully!")
                     LaunchedEffect(Unit) {
                         Toast.makeText(
