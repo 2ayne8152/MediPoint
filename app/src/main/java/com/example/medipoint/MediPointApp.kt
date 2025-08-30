@@ -23,28 +23,85 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.medipoint.ui.screens.BookingScreen
 import com.example.medipoint.ui.theme.Screens.AppointmentDetailScreen
 import com.example.medipoint.ui.theme.Screens.HomeScreen
+import com.example.medipoint.ui.theme.Screens.LoginScreen
 import com.example.medipoint.ui.theme.Screens.ProfileScreen
+import com.example.medipoint.ui.theme.Screens.RegistrationScreen
+import com.example.medipoint.ui.theme.Viewmodels.AuthViewModel
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.currentBackStackEntryAsState
 
 enum class MedipointScreens {
     HomeScreen,
     BookingScreen,
     AppointmentDetailScreen,
-    ProfileScreen
+    ProfileScreen,
+    LoginScreen,
+    RegistrationScreen
 }
 
+@Composable
+fun MediPointApp() {
+    var currentScreen by remember { mutableStateOf(MedipointScreens.LoginScreen) }
+    var isLoggedIn by remember { mutableStateOf(Firebase.auth.currentUser != null) }
+    val authViewModel: AuthViewModel = viewModel()
+
+    // If user is logged in, show main app, otherwise show auth screens
+    if (isLoggedIn) {
+        MainAppContent(
+            onSignOut = {
+                Firebase.auth.signOut()
+                isLoggedIn = false
+                currentScreen = MedipointScreens.LoginScreen
+            }
+        )
+    } else {
+        when (currentScreen) {
+            MedipointScreens.LoginScreen -> {
+                LoginScreen(
+                    authViewModel = authViewModel,
+                    onLoginSuccess = { isLoggedIn = true },
+                    onNavigateToRegistration = { currentScreen = MedipointScreens.RegistrationScreen }
+                )
+            }
+            MedipointScreens.RegistrationScreen -> {
+                RegistrationScreen(
+                    authViewModel = authViewModel,
+                    onRegistrationSuccess = {
+                        // After successful registration, go back to login
+                        currentScreen = MedipointScreens.LoginScreen
+                    },
+                    onBackToLogin = { currentScreen = MedipointScreens.LoginScreen }
+                )
+            }
+            else -> {
+                // Fallback to login screen
+                LoginScreen(
+                    authViewModel = authViewModel,
+                    onLoginSuccess = { isLoggedIn = true },
+                    onNavigateToRegistration = { currentScreen = MedipointScreens.RegistrationScreen }
+                )
+            }
+        }
+    }
+}
 
 @Composable
-fun MediPointApp(onSignOut: () -> Unit) {
+fun MainAppContent(onSignOut: () -> Unit) {
     val navController = rememberNavController()
 
     Scaffold(
@@ -79,8 +136,10 @@ fun MediPointApp(onSignOut: () -> Unit) {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(route = MedipointScreens.HomeScreen.name) {
-                HomeScreen( onBookAppointmentClick = {navController.navigate(MedipointScreens.BookingScreen.name)},
-                    onDetailClick = {navController.navigate(MedipointScreens.AppointmentDetailScreen.name)})
+                HomeScreen(
+                    onBookAppointmentClick = {navController.navigate(MedipointScreens.BookingScreen.name)},
+                    onDetailClick = {navController.navigate(MedipointScreens.AppointmentDetailScreen.name)}
+                )
             }
             composable(route = MedipointScreens.BookingScreen.name) {
                 BookingScreen()
@@ -88,7 +147,7 @@ fun MediPointApp(onSignOut: () -> Unit) {
             composable(route = MedipointScreens.AppointmentDetailScreen.name) {
                 AppointmentDetailScreen()
             }
-            composable (route = MedipointScreens.ProfileScreen.name) {
+            composable(route = MedipointScreens.ProfileScreen.name) {
                 ProfileScreen(onSignOut = onSignOut)
             }
         }
