@@ -36,7 +36,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-@Preview(showBackground = true)
 @Composable
 fun ProfileScreen(onSignOut: () -> Unit) {
     Column(
@@ -50,7 +49,7 @@ fun ProfileScreen(onSignOut: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
         MedicalInfoCard()
         Spacer(modifier = Modifier.height(16.dp))
-        OptionsSection()
+        OptionsSection(onSignOut = onSignOut)
     }
 }
 
@@ -148,7 +147,7 @@ fun MedicalInfoCard() {
 }
 
 @Composable
-fun OptionsSection() {
+fun OptionsSection(onSignOut : () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
         ProfileButtons(
             text = "Edit Profile",
@@ -180,7 +179,8 @@ fun OptionsSection() {
                 bottomEnd = 12.dp,
                 bottomStart = 12.dp
             ),
-            color = MaterialTheme.colorScheme.error
+            color = MaterialTheme.colorScheme.error,
+            onClick = onSignOut
         )
     }
 }
@@ -191,7 +191,8 @@ fun ProfileButtons(
     vector: ImageVector,
     tint: Color = Color.Black,
     shape: RoundedCornerShape,
-    color: Color = Color.Black
+    color: Color = Color.Black,
+    onClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -202,7 +203,7 @@ fun ProfileButtons(
                 shape = shape
             )
             .clickable(
-                onClick = { }
+                onClick = onClick
             ),
         shape = shape,
         colors = CardDefaults.cardColors(
