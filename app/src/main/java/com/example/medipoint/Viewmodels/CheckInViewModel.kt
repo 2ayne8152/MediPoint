@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.medipoint.Data.CheckInRecord
 import com.example.medipoint.Data.CheckInStatus
 import com.google.android.gms.location.LocationServices
+import com.google.firebase.Firebase
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -18,6 +20,8 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
     private val hospitalLat = 37.4219983
     private val hospitalLng = -122.084
     private val checkInRadius = 200 // meters
+
+    private val db = FirebaseFirestore.getInstance()
 
     private val fusedLocationClient =
         LocationServices.getFusedLocationProviderClient(application)

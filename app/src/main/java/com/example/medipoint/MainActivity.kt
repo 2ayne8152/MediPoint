@@ -18,7 +18,6 @@ class MainActivity : ComponentActivity() {
         setContent {
             MediPointTheme {
                 val authViewModel: AuthViewModel = viewModel()
-
                 // Observe the authentication state
                 if (authViewModel.isLoggedIn.value) {
                     MediPointApp(
