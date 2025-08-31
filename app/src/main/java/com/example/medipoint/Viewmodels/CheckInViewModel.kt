@@ -7,7 +7,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.medipoint.Data.CheckInRecord
 import com.example.medipoint.Data.CheckInStatus
 import com.google.android.gms.location.LocationServices
-import com.google.firebase.Firebase
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,12 +41,15 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
                         distance
                     )
                     if (distance[0] <= checkInRadius) {
-                        _checkInRecord.value = CheckInRecord(
+                        val record = CheckInRecord(
                             status = CheckInStatus.CHECKED_IN,
                             checkedInAt = System.currentTimeMillis(),
                             checkedInLat = location.latitude,
                             checkedInLng = location.longitude
                         )
+
+                        _checkInRecord.value = record
+                        saveCheckInRecord(record)
                     } else {
                         _checkInRecord.value = CheckInRecord(status = CheckInStatus.MISSED)
                     }
@@ -59,5 +61,39 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
                 _checkInRecord.value = CheckInRecord(status = CheckInStatus.MISSED)
             }
         }
+    }
+
+    fun saveCheckInRecord(record: CheckInRecord) {
+        val docRef = if (record.id.isEmpty()) {
+            db.collection("checkins").document()
+        } else {
+            db.collection("checkins").document(record.id)
+        }
+
+        val recordWithId = record.copy(id = docRef.id)
+
+        docRef.set(recordWithId.toMap())  // <-- Use toMap() to store enums properly
+            .addOnSuccessListener {
+                android.util.Log.d("Firestore", "Check-in saved!")
+            }
+            .addOnFailureListener { e ->
+                android.util.Log.e("Firestore", "Error saving check-in", e)
+            }
+    }
+
+    fun loadCheckInRecords(onResult: (List<CheckInRecord>) -> Unit) {
+        db.collection("checkins")
+            .get()
+            .addOnSuccessListener { result ->
+                val records = result.mapNotNull { doc ->
+                    val data = doc.data
+                    CheckInRecord.fromMap(data)
+                }
+                onResult(records)
+            }
+            .addOnFailureListener { e ->
+                android.util.Log.e("Firestore", "Error loading check-ins", e)
+                onResult(emptyList())
+            }
     }
 }
