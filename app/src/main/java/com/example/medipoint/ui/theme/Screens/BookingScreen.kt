@@ -27,15 +27,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.medipoint.Viewmodels.BookingViewModel
 import java.util.Calendar
 
-@Preview(showBackground = true)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BookingScreen() {
+fun BookingScreen(viewModel: BookingViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
     // === Dropdown States ===
     var selectedDoctor by remember { mutableStateOf("") }
     var expandedDoctor by remember { mutableStateOf(false) }
@@ -54,15 +53,18 @@ fun BookingScreen() {
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
 
-    val datePickerDialog = DatePickerDialog(
-        context,
-        { _, year, month, day ->
-            selectedDate = "$day/${month + 1}/$year"
-        },
-        calendar.get(Calendar.YEAR),
-        calendar.get(Calendar.MONTH),
-        calendar.get(Calendar.DAY_OF_MONTH)
-    )
+    // Create DatePickerDialog
+    val datePickerDialog = remember {
+        DatePickerDialog(
+            context,
+            { _, year, month, day ->
+                selectedDate = "$day/${month + 1}/$year"
+            },
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
+        )
+    }
 
     // === Additional Notes ===
     var notes by remember { mutableStateOf("") }
@@ -213,7 +215,19 @@ fun BookingScreen() {
         // === Request Appointment Button ===
         Button(
             onClick = {
-                // TODO: Handle form submission
+                viewModel.saveAppointment(
+                    doctorName = selectedDoctor,
+                    appointmentType = appointmentType,
+                    date = selectedDate,
+                    time = preferredTime,
+                    notes = notes,
+                    onSuccess = {
+                        // TODO: show success toast/snackbar
+                    },
+                    onFailure = { e ->
+                        // TODO: show failure toast/snackbar
+                    }
+                )
             },
             modifier = Modifier
                 .fillMaxWidth()

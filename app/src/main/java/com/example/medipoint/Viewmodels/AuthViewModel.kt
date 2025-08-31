@@ -3,14 +3,14 @@ package com.example.medipoint.ui.theme.Viewmodels
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.auth.FirebaseUser
 
 class AuthViewModel : ViewModel() {
     private val auth = FirebaseAuth.getInstance()
-    val isLoggedIn =    mutableStateOf(auth.currentUser != null)
+    val isLoggedIn = mutableStateOf(auth.currentUser != null)
 
     fun signOut() {
         auth.signOut()

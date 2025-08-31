@@ -67,7 +67,6 @@ import kotlinx.coroutines.launch
 import com.google.firebase.firestore.ktx.firestore
 import kotlinx.coroutines.tasks.await
 
-
 @Composable
 fun ProfileScreen(onSignOut: () -> Unit) {
     var firebaseUser by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
