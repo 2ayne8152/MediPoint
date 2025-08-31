@@ -1,6 +1,7 @@
-package com.example.medipoint.ui.screens
+package com.example.medipoint.ui.theme.Screens
 
 import android.app.DatePickerDialog
+import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -29,44 +30,28 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.medipoint.Viewmodels.BookingViewModel
 import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BookingScreen(viewModel: BookingViewModel = androidx.lifecycle.viewmodel.compose.viewModel()) {
-    // === Dropdown States ===
-    var selectedDoctor by remember { mutableStateOf("") }
-    var expandedDoctor by remember { mutableStateOf(false) }
-    val doctorList = listOf("Dr. Johnson", "Dr. Lee", "Dr. Smith")
-
-    var appointmentType by remember { mutableStateOf("") }
-    var expandedType by remember { mutableStateOf(false) }
-    val appointmentTypes = listOf("General Checkup", "Consultation", "Follow-up")
-
-    var preferredTime by remember { mutableStateOf("") }
-    var expandedTime by remember { mutableStateOf(false) }
-    val timeSlots = listOf("09:00 AM", "10:30 AM", "02:00 PM", "04:00 PM")
-
-    // === Date Picker ===
-    var selectedDate by remember { mutableStateOf("") }
+fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
 
-    // Create DatePickerDialog
-    val datePickerDialog = remember {
-        DatePickerDialog(
-            context,
-            { _, year, month, day ->
-                selectedDate = "$day/${month + 1}/$year"
-            },
-            calendar.get(Calendar.YEAR),
-            calendar.get(Calendar.MONTH),
-            calendar.get(Calendar.DAY_OF_MONTH)
-        )
-    }
+    // State holders
+    var selectedDoctor by remember { mutableStateOf("") }
+    var expandedDoctor by remember { mutableStateOf(false) }
 
-    // === Additional Notes ===
+    var appointmentType by remember { mutableStateOf("") }
+    var expandedType by remember { mutableStateOf(false) }
+
+    var preferredTime by remember { mutableStateOf("") }
+    var expandedTime by remember { mutableStateOf(false) }
+
+    var selectedDate by remember { mutableStateOf("") }
+
     var notes by remember { mutableStateOf("") }
 
     Column(
@@ -74,26 +59,11 @@ fun BookingScreen(viewModel: BookingViewModel = androidx.lifecycle.viewmodel.com
             .fillMaxSize()
             .padding(20.dp)
     ) {
-        Text(
-            text = "Appointment Details",
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
+        Text("Appointment Details", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(16.dp))
 
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = "Please select your preferred time and doctor",
-            fontSize = 14.sp,
-            color = Color.Gray
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // === Select Doctor Dropdown ===
-        ExposedDropdownMenuBox(
-            expanded = expandedDoctor,
-            onExpandedChange = { expandedDoctor = !expandedDoctor }
-        ) {
+        // Doctor dropdown
+        ExposedDropdownMenuBox(expanded = expandedDoctor, onExpandedChange = { expandedDoctor = !expandedDoctor }) {
             TextField(
                 value = selectedDoctor,
                 onValueChange = {},
@@ -104,29 +74,17 @@ fun BookingScreen(viewModel: BookingViewModel = androidx.lifecycle.viewmodel.com
                     .menuAnchor()
                     .fillMaxWidth()
             )
-            ExposedDropdownMenu(
-                expanded = expandedDoctor,
-                onDismissRequest = { expandedDoctor = false }
-            ) {
-                doctorList.forEach { doctor ->
-                    DropdownMenuItem(
-                        text = { Text(doctor) },
-                        onClick = {
-                            selectedDoctor = doctor
-                            expandedDoctor = false
-                        }
-                    )
+            ExposedDropdownMenu(expanded = expandedDoctor, onDismissRequest = { expandedDoctor = false }) {
+                listOf("Dr. Johnson", "Dr. Lee", "Dr. Smith").forEach { doc ->
+                    DropdownMenuItem(text = { Text(doc) }, onClick = { selectedDoctor = doc; expandedDoctor = false })
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(Modifier.height(16.dp))
 
-        // === Appointment Type Dropdown ===
-        ExposedDropdownMenuBox(
-            expanded = expandedType,
-            onExpandedChange = { expandedType = !expandedType }
-        ) {
+        // Appointment type dropdown
+        ExposedDropdownMenuBox(expanded = expandedType, onExpandedChange = { expandedType = !expandedType }) {
             TextField(
                 value = appointmentType,
                 onValueChange = {},
@@ -137,42 +95,30 @@ fun BookingScreen(viewModel: BookingViewModel = androidx.lifecycle.viewmodel.com
                     .menuAnchor()
                     .fillMaxWidth()
             )
-            ExposedDropdownMenu(
-                expanded = expandedType,
-                onDismissRequest = { expandedType = false }
-            ) {
-                appointmentTypes.forEach { type ->
-                    DropdownMenuItem(
-                        text = { Text(type) },
-                        onClick = {
-                            appointmentType = type
-                            expandedType = false
-                        }
-                    )
+            ExposedDropdownMenu(expanded = expandedType, onDismissRequest = { expandedType = false }) {
+                listOf("General Checkup", "Consultation", "Follow-up").forEach { type ->
+                    DropdownMenuItem(text = { Text(type) }, onClick = { appointmentType = type; expandedType = false })
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(Modifier.height(16.dp))
 
-        // === Preferred Date Picker ===
+        // Date picker field
         OutlinedTextField(
             value = selectedDate,
-            onValueChange = {},
+            onValueChange = { },
             label = { Text("Preferred Date *") },
             readOnly = true,
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { datePickerDialog.show() }
+                .clickable { showAndroidDatePicker(context, calendar) { date -> selectedDate = date } }
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(Modifier.height(16.dp))
 
-        // === Preferred Time Dropdown ===
-        ExposedDropdownMenuBox(
-            expanded = expandedTime,
-            onExpandedChange = { expandedTime = !expandedTime }
-        ) {
+        // Time dropdown
+        ExposedDropdownMenuBox(expanded = expandedTime, onExpandedChange = { expandedTime = !expandedTime }) {
             TextField(
                 value = preferredTime,
                 onValueChange = {},
@@ -183,59 +129,50 @@ fun BookingScreen(viewModel: BookingViewModel = androidx.lifecycle.viewmodel.com
                     .menuAnchor()
                     .fillMaxWidth()
             )
-            ExposedDropdownMenu(
-                expanded = expandedTime,
-                onDismissRequest = { expandedTime = false }
-            ) {
-                timeSlots.forEach { time ->
-                    DropdownMenuItem(
-                        text = { Text(time) },
-                        onClick = {
-                            preferredTime = time
-                            expandedTime = false
-                        }
-                    )
+            ExposedDropdownMenu(expanded = expandedTime, onDismissRequest = { expandedTime = false }) {
+                listOf("09:00 AM", "10:30 AM", "02:00 PM", "04:00 PM").forEach { time ->
+                    DropdownMenuItem(text = { Text(time) }, onClick = { preferredTime = time; expandedTime = false })
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(Modifier.height(16.dp))
 
-        // === Additional Notes TextField ===
+        // Notes field
         OutlinedTextField(
             value = notes,
             onValueChange = { notes = it },
             label = { Text("Additional Notes") },
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text("Describe your symptoms or concerns...") }
+            modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(Modifier.height(24.dp))
 
-        // === Request Appointment Button ===
         Button(
             onClick = {
                 viewModel.saveAppointment(
-                    doctorName = selectedDoctor,
-                    appointmentType = appointmentType,
-                    date = selectedDate,
-                    time = preferredTime,
-                    notes = notes,
-                    onSuccess = {
-                        // TODO: show success toast/snackbar
-                    },
-                    onFailure = { e ->
-                        // TODO: show failure toast/snackbar
-                    }
+                    selectedDoctor, appointmentType, selectedDate, preferredTime, notes,
+                    onSuccess = {},
+                    onFailure = {}
                 )
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(50.dp),
+            modifier = Modifier.fillMaxWidth().height(50.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00001A)),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text(text = "Request Appointment", color = Color.White)
+            Text("Request Appointment", color = Color.White)
         }
     }
+}
+
+private fun showAndroidDatePicker(context: Context, calendar: Calendar, onDateSelected: (String) -> Unit) {
+    DatePickerDialog(
+        context,
+        { _, year, month, day ->
+            onDateSelected("$day/${month + 1}/$year")
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    ).show()
 }

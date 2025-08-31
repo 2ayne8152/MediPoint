@@ -33,7 +33,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.medipoint.ui.screens.BookingScreen
+import com.example.medipoint.ui.theme.Screens.BookingScreen
 import com.example.medipoint.ui.theme.Screens.AppointmentDetailScreen
 import com.example.medipoint.ui.theme.Screens.HomeScreen
 import com.example.medipoint.ui.theme.Screens.LoginScreen
