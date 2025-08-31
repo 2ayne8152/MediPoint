@@ -1,10 +1,7 @@
 package com.example.medipoint.ui.theme.Screens
 
-import android.annotation.SuppressLint
-import android.text.format.DateFormat
-import android.widget.Toast
-import androidx.activity.result.launch
-import androidx.compose.animation.core.copy
+import com.example.medipoint.Viewmodels.ProfileViewModel
+import com.example.medipoint.Viewmodels.UserProfile
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,7 +26,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Create
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -39,47 +35,41 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import com.google.firebase.Firebase
-/*import androidx.privacysandbox.tools.core.generator.build*/
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.auth.UserProfileChangeRequest
-import com.google.firebase.firestore.firestore
-import kotlinx.coroutines.coroutineScope
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
-import com.google.firebase.firestore.ktx.firestore
-import kotlinx.coroutines.tasks.await
-
-
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.collectAsState
 @Composable
-fun ProfileScreen(onSignOut: () -> Unit) {
-    var firebaseUser by remember { mutableStateOf(FirebaseAuth.getInstance().currentUser) }
-    val coroutineScope = rememberCoroutineScope()
+fun ProfileScreen(onSignOut: () -> Unit,
+                  profileViewModel: ProfileViewModel = viewModel()) {
+    val viewModel: ProfileViewModel = viewModel()
+    val userProfile: UserProfile? by profileViewModel.userProfile.collectAsState()
+    val saveStatus: String? by profileViewModel.saveStatus.collectAsState()
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
-    LaunchedEffect(FirebaseAuth.getInstance().currentUser) {
-        firebaseUser = FirebaseAuth.getInstance().currentUser
-    }
-
-    fun updateFirebaseUserInMemory(updatedUser: FirebaseUser?) {
-        firebaseUser = updatedUser
+    // Show save status messages
+    LaunchedEffect(saveStatus) {
+        saveStatus?.let { message ->
+            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+            viewModel.clearSaveStatus()
+        }
     }
 
     Column(
@@ -89,16 +79,17 @@ fun ProfileScreen(onSignOut: () -> Unit) {
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        firebaseUser?.let { user ->
+        userProfile?.let { profile ->
             ProfileCard(
-                user = user,
-                onUsernameChange = { newUsername ->
+                profile = profile,
+                onUsernameChange = { newName ->
                     coroutineScope.launch {
-                        FirebaseAuth.getInstance().currentUser?.reload()?.addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                updateFirebaseUserInMemory(FirebaseAuth.getInstance().currentUser)
-                            }
-                        }
+                        viewModel.updateDisplayName(newName)
+                    }
+                },
+                onPhoneNumberChange = { newPhone ->
+                    coroutineScope.launch {
+                        viewModel.updatePhoneNumber(newPhone)
                     }
                 }
             )
@@ -112,83 +103,18 @@ fun ProfileScreen(onSignOut: () -> Unit) {
 }
 
 @Composable
-fun ProfileCard(user: FirebaseUser, onUsernameChange: (String) -> Unit) {
+fun ProfileCard(
+    profile: UserProfile,
+    onUsernameChange: (String) -> Unit,
+    onPhoneNumberChange: (String) -> Unit
+) {
     var isEditingUsername by remember { mutableStateOf(false) }
-    // Initialize editableUsername with displayName or an empty string if null
-    var editableUsername by remember(user.displayName) { mutableStateOf(user.displayName ?: "") }
+    var editableUsername by remember { mutableStateOf(profile.displayName ?: "") }
 
     var isEditingPhoneNumber by remember { mutableStateOf(false) }
-    var editablePhoneNumber by remember { mutableStateOf("") }
+    var editablePhoneNumber by remember { mutableStateOf(profile.phoneNumber ?: "") }
 
-
-    val context = LocalContext.current
     val focusManager = LocalFocusManager.current
-    val coroutineScope = rememberCoroutineScope()
-
-    LaunchedEffect(user.uid) {
-        try {
-            val userDoc = Firebase.firestore.collection("users").document(user.uid).get().await()
-            editablePhoneNumber = userDoc.getString("phoneNumber") ?: ""
-        } catch (e: Exception) {
-            Toast.makeText(context, "Failed to load phone number", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    // Determine the text to display based on whether a name exists and if we are editing
-    val displayNameText = user.displayName.takeIf { !it.isNullOrBlank() }
-
-    fun saveUsername() {
-        if (editableUsername.isBlank()) {
-            Toast.makeText(context, "Username cannot be empty", Toast.LENGTH_SHORT).show()
-            return
-        }
-        // No need to check if it's the same as currentUserName if currentUserName could be null/empty
-        // The check against the actual user.displayName will suffice if no change
-
-        val profileUpdates = UserProfileChangeRequest.Builder()
-            .setDisplayName(editableUsername)
-            .build()
-
-        user.updateProfile(profileUpdates)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    Toast.makeText(context, "Username updated successfully", Toast.LENGTH_SHORT).show()
-                    onUsernameChange(editableUsername)
-                    isEditingUsername = false
-                    focusManager.clearFocus()
-                } else {
-                    Toast.makeText(context, "Failed to update username: ${task.exception?.message}", Toast.LENGTH_LONG).show()
-                }
-            }
-    }
-    @SuppressLint("CoroutineCreationDuringComposition")
-    fun savePhoneNumber() {
-        if (editablePhoneNumber.isBlank()) { // Add more validation as needed (e.g., phone format)
-            Toast.makeText(context, "Phone number cannot be empty", Toast.LENGTH_SHORT).show()
-            return
-        }
-
-         val userId = user.uid
-         val userDocRef = Firebase.firestore.collection("users").document(userId)
-         coroutineScope.launch {
-         try {
-         userDocRef.update("phoneNumber", editablePhoneNumber).await() // or .set with merge
-         Toast.makeText(context, "Phone number updated", Toast.LENGTH_SHORT).show()
-         isEditingPhoneNumber = false
-         focusManager.clearFocus()
-         // Potentially call a lambda to notify ProfileScreen to refresh its Firestore data
-         } catch (e: Exception) {
-         Toast.makeText(context, "Failed to update phone: ${e.message}", Toast.LENGTH_LONG).show()
-         }
-         }
-
-
-        // For UI demonstration purposes without full Firestore integration yet:
-        Toast.makeText(context, "Phone number save (UI Demo): $editablePhoneNumber", Toast.LENGTH_SHORT).show()
-        isEditingPhoneNumber = false
-        focusManager.clearFocus()
-        // Here you would also update the state in ProfileScreen that holds the phone number from Firestore.
-    }
 
     Card(
         modifier = Modifier
@@ -199,7 +125,7 @@ fun ProfileCard(user: FirebaseUser, onUsernameChange: (String) -> Unit) {
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Username Row (as before)
+            // Username Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -214,15 +140,23 @@ fun ProfileCard(user: FirebaseUser, onUsernameChange: (String) -> Unit) {
                         singleLine = true,
                         modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions.Default.copy(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { saveUsername() })
+                        keyboardActions = KeyboardActions(onDone = {
+                            onUsernameChange(editableUsername)
+                            isEditingUsername = false
+                            focusManager.clearFocus()
+                        })
                     )
                     Row {
-                        IconButton(onClick = { saveUsername() }) {
+                        IconButton(onClick = {
+                            onUsernameChange(editableUsername)
+                            isEditingUsername = false
+                            focusManager.clearFocus()
+                        }) {
                             Icon(Icons.Filled.Check, contentDescription = "Save Username")
                         }
                         IconButton(onClick = {
                             isEditingUsername = false
-                            editableUsername = user.displayName ?: ""
+                            editableUsername = profile.displayName ?: ""
                             focusManager.clearFocus()
                         }) {
                             Icon(Icons.Filled.Close, contentDescription = "Cancel Username Edit")
@@ -230,20 +164,20 @@ fun ProfileCard(user: FirebaseUser, onUsernameChange: (String) -> Unit) {
                     }
                 } else {
                     Text(
-                        text = displayNameText ?: "Edit Username",
+                        text = profile.displayName ?: "Edit Username",
                         fontSize = 20.sp,
-                        fontWeight = if (displayNameText != null) FontWeight.Bold else FontWeight.Normal,
-                        color = if (displayNameText != null) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                        fontWeight = if (profile.displayName != null) FontWeight.Bold else FontWeight.Normal,
+                        color = if (profile.displayName != null) MaterialTheme.colorScheme.onSurface else Color.Gray,
                         modifier = Modifier
                             .weight(1f)
-                            .clickable(enabled = displayNameText == null) {
-                                if (displayNameText == null) {
+                            .clickable(enabled = profile.displayName == null) {
+                                if (profile.displayName == null) {
                                     isEditingUsername = true
                                 }
                             }
                     )
                     IconButton(onClick = {
-                        editableUsername = user.displayName ?: ""
+                        editableUsername = profile.displayName ?: ""
                         isEditingUsername = true
                     }) {
                         Icon(Icons.Filled.Edit, contentDescription = "Edit Username")
@@ -251,32 +185,22 @@ fun ProfileCard(user: FirebaseUser, onUsernameChange: (String) -> Unit) {
                 }
             }
 
-            // Email (as before)
+            // Email
             Text(
-                text = user.email ?: "No email provided",
+                text = profile.email ?: "No email provided",
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.secondary
             )
-            // Member Since (as before)
-            val creationTimestamp = user.metadata?.creationTimestamp
-            val memberSinceText = if (creationTimestamp != null) {
-                "Member since ${android.text.format.DateFormat.format("MMMM yyyy", creationTimestamp)}"
-            } else {
-                "Member since N/A"
-            }
-            Text(memberSinceText, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // --- Phone Number Row ---
+            // Phone Number Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Call, // Or Icons.Filled.Phone
+                    imageVector = Icons.Filled.Call,
                     contentDescription = "Contact Number Icon",
-                    modifier = Modifier.padding(end = 6.dp) // Give some space before the text/field
+                    modifier = Modifier.padding(end = 6.dp)
                 )
                 if (isEditingPhoneNumber) {
                     OutlinedTextField(
@@ -287,42 +211,43 @@ fun ProfileCard(user: FirebaseUser, onUsernameChange: (String) -> Unit) {
                         modifier = Modifier.weight(1f),
                         keyboardOptions = KeyboardOptions.Default.copy(
                             imeAction = ImeAction.Done,
-                            keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone
+                            keyboardType = KeyboardType.Phone
                         ),
-                        keyboardActions = KeyboardActions(onDone = { savePhoneNumber() }),
+                        keyboardActions = KeyboardActions(onDone = {
+                            onPhoneNumberChange(editablePhoneNumber)
+                            isEditingPhoneNumber = false
+                            focusManager.clearFocus()
+                        }),
                     )
-                    IconButton(onClick = { savePhoneNumber() }) {
+                    IconButton(onClick = {
+                        onPhoneNumberChange(editablePhoneNumber)
+                        isEditingPhoneNumber = false
+                        focusManager.clearFocus()
+                    }) {
                         Icon(Icons.Filled.Check, contentDescription = "Save Phone Number")
                     }
                     IconButton(onClick = {
                         isEditingPhoneNumber = false
-                        // Reset to original (which should be from Firestore)
-                        // For now, using user.phoneNumber, but this needs to be the Firestore value
-                        editablePhoneNumber = user.phoneNumber ?: ""
+                        editablePhoneNumber = profile.phoneNumber ?: ""
                         focusManager.clearFocus()
                     }) {
                         Icon(Icons.Filled.Close, contentDescription = "Cancel Phone Edit")
                     }
                 } else {
                     Text(
-                        // IMPORTANT: This text should display the phone number fetched from Firestore
-                        // For now, it uses user.phoneNumber if available, or a placeholder.
-                        text = if (editablePhoneNumber.isNotBlank()) editablePhoneNumber else "Add phone number",
+                        text = if (profile.phoneNumber.isNullOrBlank()) "Add phone number" else profile.phoneNumber!!,
                         modifier = Modifier
                             .weight(1f)
-                            .padding(start = 6.dp, top = 12.dp, bottom = 12.dp, end = 12.dp) // Adjust padding to align with TextField
-                            .clickable { // Make the text itself clickable to start editing
-                                // Ensure editablePhoneNumber is up-to-date before editing
-                                // (ideally from your ViewModel/Firestore state)
-                                editablePhoneNumber = user.phoneNumber ?: "" // Or your Firestore fetched value
+                            .padding(start = 6.dp, top = 12.dp, bottom = 12.dp, end = 12.dp)
+                            .clickable {
+                                editablePhoneNumber = profile.phoneNumber ?: ""
                                 isEditingPhoneNumber = true
                             },
-                        color = if (editablePhoneNumber.isNotBlank()) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                        color = if (profile.phoneNumber.isNullOrBlank()) Color.Gray else MaterialTheme.colorScheme.onSurface,
                         fontSize = 16.sp
                     )
                     IconButton(onClick = {
-                        // Ensure editablePhoneNumber is up-to-date before editing
-                        editablePhoneNumber = user.phoneNumber ?: "" // Or your Firestore fetched value
+                        editablePhoneNumber = profile.phoneNumber ?: ""
                         isEditingPhoneNumber = true
                     }) {
                         Icon(Icons.Filled.Edit, contentDescription = "Edit Phone Number")
@@ -330,13 +255,9 @@ fun ProfileCard(user: FirebaseUser, onUsernameChange: (String) -> Unit) {
                 }
             }
 
-            // Other ProfileInfo (as before, these would also come from Firestore ideally)
-            ProfileInfo(text = "Born March 15, 1985", vector = Icons.Filled.DateRange)
-            ProfileInfo(text = "123 Main Street, Springfield, IL 62701", vector = Icons.Filled.Place)
         }
     }
 }
-
 
 @Composable
 fun MedicalInfoCard() {
