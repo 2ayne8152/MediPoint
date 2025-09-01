@@ -84,7 +84,11 @@ fun AppointmentDetailScreen(
                     .fillMaxWidth()
             ) {
                 Text("Dr. Johnson", style = MaterialTheme.typography.titleLarge)
-                Text("General Checkup", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                Text(
+                    "General Checkup",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray
+                )
                 Spacer(modifier = Modifier.height(12.dp))
                 AppointmentInfoRow(Icons.Default.DateRange, "Monday, July 28, 2025")
                 AppointmentInfoRow(Icons.Filled.Settings, "09:00 AM")
@@ -96,17 +100,168 @@ fun AppointmentDetailScreen(
                         .background(Color(0xFF00C853), shape = RoundedCornerShape(12.dp))
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
-                    Text("Confirmed", color = Color.White, style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "Confirmed",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }
 
-        // ✅ Pass appointmentId into CheckInCard
         CheckInCard(
             checkInRecord = checkInRecord,
             appointmentId = appointmentId,
             viewModel = viewModel
         )
+
+        // Location & Directions Card
+
+        Card(
+
+            shape = RoundedCornerShape(16.dp),
+
+            modifier = Modifier
+
+                .fillMaxWidth()
+
+                .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp)),
+
+            elevation = CardDefaults.cardElevation(4.dp),
+
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+
+        ) {
+
+            Column(modifier = Modifier.padding(16.dp)) {
+
+                Text(
+
+                    stringResource(R.string.location_directions),
+
+                    style = MaterialTheme.typography.titleMedium
+
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Card(
+
+                    modifier = Modifier
+
+                        .fillMaxWidth()
+
+                        .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp)),
+
+                    colors = CardDefaults.cardColors(
+
+                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+
+                    )
+
+                ) {
+
+                    Row {
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(
+
+                            modifier = Modifier
+
+                                .fillMaxWidth()
+
+                                .padding(12.dp)
+
+                        ) {
+
+                            Text("Main Building", style = MaterialTheme.typography.bodyLarge)
+
+                            Text(
+
+                                "2nd Floor\nRoom 201",
+
+                                style = MaterialTheme.typography.bodySmall,
+
+                                color = Color.Gray
+
+                            )
+
+                        }
+
+                    }
+
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+
+                    text = stringResource(R.string.get_directions),
+
+                    style = MaterialTheme.typography.titleMedium
+
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                DirectionButton("Open Google Map")
+
+            }
+
+        }
+
+
+        // Preparation Tips
+
+        Card(
+
+            shape = RoundedCornerShape(16.dp),
+
+            modifier = Modifier
+
+                .fillMaxWidth()
+
+                .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp)),
+
+            elevation = CardDefaults.cardElevation(4.dp),
+
+            colors = CardDefaults.cardColors(containerColor = Color.White)
+
+        ) {
+
+            Column {
+
+                Text(
+
+                    "Preparation Tips",
+
+                    style = MaterialTheme.typography.titleMedium,
+
+                    modifier = Modifier.padding(16.dp)
+
+                )
+
+                Text(
+
+                    "• Arrive 15 minutes early for check-in\n\n" +
+
+                            "• Bring your insurance card and ID\n\n" +
+
+                            "• List of current medications\n\n" +
+
+                            "• Any questions or concerns to discuss",
+
+                    style = MaterialTheme.typography.bodyMedium,
+
+                    modifier = Modifier.padding(16.dp)
+
+                )
+
+            }
+
+        }
+
     }
 }
 
@@ -182,4 +337,21 @@ fun CheckInCard(
             }
         }
     }
+}
+
+@Composable
+fun DirectionButton(label: String) {
+    Button(
+        onClick = { /* Handle directions */ },
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = Color.Black
+        )
+    ) {
+        Text(label)
+    }
+
 }
