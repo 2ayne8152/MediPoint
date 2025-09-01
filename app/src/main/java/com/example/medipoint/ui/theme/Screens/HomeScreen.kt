@@ -42,7 +42,7 @@ import com.example.medipoint.Viewmodels.BookingViewModel
 @Composable
 fun HomeScreen(
     onBookAppointmentClick: () -> Unit,
-    onDetailClick: (Any?) -> Unit,
+    onDetailClick: (String) -> Unit,
     bookingViewModel: BookingViewModel = viewModel()
 ) {
     // Collect appointments from the ViewModel
@@ -154,7 +154,7 @@ fun HomeScreen(
                     date = appt.date,
                     time = appt.time,
                     modifier = Modifier.padding(top = 8.dp),
-                    onDetailClick = onDetailClick
+                    onDetailClick = { onDetailClick(appt.id) }
                 )
             }
         }

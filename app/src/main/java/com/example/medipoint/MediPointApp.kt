@@ -58,7 +58,7 @@ enum class MedipointScreens(val route: String) {
     RegistrationScreen("registration");
 
     companion object {
-        fun appointmentDetail(appointmentId: Any?): String {
+        fun appointmentDetail(appointmentId: String): String {
             return "appointmentDetail/$appointmentId"
         }
     }
