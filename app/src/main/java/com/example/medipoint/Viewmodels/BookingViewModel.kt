@@ -1,40 +1,48 @@
 package com.example.medipoint.Viewmodels
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.example.medipoint.Data.Appointment
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.launch
-import java.util.UUID
 
 class BookingViewModel : ViewModel() {
 
     private val db = FirebaseFirestore.getInstance()
 
     fun saveAppointment(
-        doctorName: String,
-        appointmentType: String,
+        doctor: String,
+        type: String,
         date: String,
         time: String,
         notes: String,
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit
     ) {
-        val appointment = Appointment(
-            id = UUID.randomUUID().toString(),
-            doctorName = doctorName,
-            appointmentType = appointmentType,
-            date = date,
-            time = time,
-            notes = notes
+        val appointmentRef = db.collection("appointments").document()
+        val appointmentId = appointmentRef.id
+
+        val appointment = hashMapOf(
+            "id" to appointmentId,
+            "doctor" to doctor,
+            "type" to type,
+            "date" to date,
+            "time" to time,
+            "notes" to notes
         )
 
-        viewModelScope.launch {
-            db.collection("appointments")
-                .document(appointment.id)
-                .set(appointment)
-                .addOnSuccessListener { onSuccess() }
-                .addOnFailureListener { e -> onFailure(e) }
+        // Create a check-in record inside a "checkin" subcollection
+        val checkInRef = appointmentRef.collection("checkin").document()
+        val checkInRecord = hashMapOf(
+            "id" to checkInRef.id,
+            "checkedIn" to false,
+            "checkInTime" to null
+        )
+
+        db.runBatch { batch ->
+            batch.set(appointmentRef, appointment)
+            batch.set(checkInRef, checkInRecord)
+        }.addOnSuccessListener {
+            onSuccess()
+        }.addOnFailureListener { e ->
+            onFailure(e)
         }
     }
 }
