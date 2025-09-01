@@ -26,19 +26,35 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.medipoint.R
+import com.example.medipoint.Viewmodels.BookingViewModel
 
 @Composable
 fun HomeScreen(
     onBookAppointmentClick: () -> Unit,
-    onDetailClick: () -> Unit
+    onDetailClick: (Any?) -> Unit,
+    bookingViewModel: BookingViewModel = viewModel()
 ) {
+    // Collect appointments from the ViewModel
+    val appointments by bookingViewModel.appointments.collectAsState()
+
+    // Start listening once when the screen enters
+    LaunchedEffect(Unit) {
+        bookingViewModel.startAppointmentsListener(
+            userId = null // or pass your real userId if you store it
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -51,7 +67,7 @@ fun HomeScreen(
             style = MaterialTheme.typography.headlineSmall
         )
         Text(
-            text = "You have 3 upcoming appointments",
+            text = "You have ${appointments.size} upcoming appointment${if (appointments.size == 1) "" else "s"}",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray,
             modifier = Modifier.padding(top = 4.dp)
@@ -122,30 +138,26 @@ fun HomeScreen(
             )
         }
 
-        AppointmentCard(
-            "Dr. Johnson",
-            "Cardiologist",
-            "Mon, Jul 28",
-            "09:00 AM",
-            Modifier.padding(top = 8.dp),
-            onDetailClick = onDetailClick
-        )
-        AppointmentCard(
-            "Dr. Smith",
-            "Dermatologist",
-            "Tue, Jul 29",
-            "02:15 PM",
-            Modifier.padding(top = 8.dp),
-            onDetailClick = onDetailClick
-        )
-        AppointmentCard(
-            "Dr. Williams",
-            "Orthopedist",
-            "Thu, Jul 31",
-            "11:30 AM",
-            Modifier.padding(top = 8.dp),
-            onDetailClick = onDetailClick
-        )
+        // Render appointments from Firestore
+        if (appointments.isEmpty()) {
+            Text(
+                "No upcoming appointments.",
+                color = Color.Gray,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        } else {
+            appointments.forEach { appt ->
+                AppointmentCard(
+                    doctor = appt.doctorName,
+                    specialty = appt.appointmentType,
+                    date = appt.date,
+                    time = appt.time,
+                    modifier = Modifier.padding(top = 8.dp),
+                    onDetailClick = onDetailClick
+                )
+            }
+        }
     }
 }
 
@@ -226,7 +238,7 @@ fun AppointmentCard(
                 )
             }
             Button(
-                onClick = onDetailClick ,
+                onClick = onDetailClick,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.Black,
                     contentColor = Color.White

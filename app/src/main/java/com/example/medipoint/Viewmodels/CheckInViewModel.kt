@@ -5,14 +5,12 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.medipoint.Data.CheckInRecord
-import com.example.medipoint.Data.CheckInStatus
 import com.google.android.gms.location.LocationServices
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-
 
 class CheckInViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -21,15 +19,17 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
     private val checkInRadius = 200 // meters
 
     private val db = FirebaseFirestore.getInstance()
-
     private val fusedLocationClient =
         LocationServices.getFusedLocationProviderClient(application)
 
-    private val _checkInRecord = MutableStateFlow(CheckInRecord(status = CheckInStatus.PENDING))
+    private val _checkInRecord = MutableStateFlow(CheckInRecord())
     val checkInRecord: StateFlow<CheckInRecord> = _checkInRecord
 
+    /**
+     * Attempt to check in for a specific appointment
+     */
     @SuppressLint("MissingPermission")
-    fun attemptCheckIn() {
+    fun attemptCheckIn(appointmentId: String) {
         viewModelScope.launch {
             try {
                 val location = fusedLocationClient.lastLocation.await()
@@ -40,39 +40,41 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
                         hospitalLat, hospitalLng,
                         distance
                     )
+
                     if (distance[0] <= checkInRadius) {
                         val record = CheckInRecord(
-                            status = CheckInStatus.CHECKED_IN,
-                            checkedInAt = System.currentTimeMillis(),
-                            checkedInLat = location.latitude,
-                            checkedInLng = location.longitude
+                            checkedIn = true,
+                            checkInTime = System.currentTimeMillis(),
+                            checkInLat = location.latitude,
+                            checkInLng = location.longitude
                         )
-
                         _checkInRecord.value = record
-                        saveCheckInRecord(record)
+                        saveCheckInRecord(appointmentId, record)
                     } else {
-                        _checkInRecord.value = CheckInRecord(status = CheckInStatus.MISSED)
+                        _checkInRecord.value = CheckInRecord(checkedIn = false)
                     }
                 } else {
-                    _checkInRecord.value = CheckInRecord(status = CheckInStatus.MISSED)
+                    _checkInRecord.value = CheckInRecord(checkedIn = false)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                _checkInRecord.value = CheckInRecord(status = CheckInStatus.MISSED)
+                _checkInRecord.value = CheckInRecord(checkedIn = false)
             }
         }
     }
 
-    fun saveCheckInRecord(record: CheckInRecord) {
-        val docRef = if (record.id.isEmpty()) {
-            db.collection("checkins").document()
-        } else {
-            db.collection("checkins").document(record.id)
-        }
+    /**
+     * Save record under the appointment's subcollection
+     */
+    private fun saveCheckInRecord(appointmentId: String, record: CheckInRecord) {
+        val checkInRef = db.collection("appointments")
+            .document(appointmentId)
+            .collection("checkin")
+            .document()
 
-        val recordWithId = record.copy(id = docRef.id)
+        val recordWithId = record.copy(id = checkInRef.id)
 
-        docRef.set(recordWithId.toMap())  // <-- Use toMap() to store enums properly
+        checkInRef.set(recordWithId)
             .addOnSuccessListener {
                 android.util.Log.d("Firestore", "Check-in saved!")
             }
@@ -81,14 +83,16 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
             }
     }
 
-    fun loadCheckInRecords(onResult: (List<CheckInRecord>) -> Unit) {
-        db.collection("checkins")
+    /**
+     * Load all check-ins for an appointment
+     */
+    fun loadCheckInRecords(appointmentId: String, onResult: (List<CheckInRecord>) -> Unit) {
+        db.collection("appointments")
+            .document(appointmentId)
+            .collection("checkin")
             .get()
             .addOnSuccessListener { result ->
-                val records = result.mapNotNull { doc ->
-                    val data = doc.data
-                    CheckInRecord.fromMap(data)
-                }
+                val records = result.mapNotNull { it.toObject(CheckInRecord::class.java) }
                 onResult(records)
             }
             .addOnFailureListener { e ->

@@ -7,7 +7,6 @@ data class Appointment(
     val date: String = "",
     val time: String = "",
     val status: String = "Scheduled",
-    val location: String = "",
     val notes: String = "",
     val checkInRecord: CheckInRecord? = null
 )

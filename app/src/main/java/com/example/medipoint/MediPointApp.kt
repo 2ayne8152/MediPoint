@@ -1,4 +1,6 @@
-@file:OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3Api::class,
+@file:OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3Api::class,
     ExperimentalMaterial3Api::class
 )
 
@@ -29,12 +31,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.example.medipoint.ui.theme.Screens.BookingScreen
+import androidx.navigation.navArgument
 import com.example.medipoint.ui.theme.Screens.AppointmentDetailScreen
+import com.example.medipoint.ui.theme.Screens.BookingScreen
 import com.example.medipoint.ui.theme.Screens.HomeScreen
 import com.example.medipoint.ui.theme.Screens.LoginScreen
 import com.example.medipoint.ui.theme.Screens.ProfileScreen
@@ -42,16 +48,20 @@ import com.example.medipoint.ui.theme.Screens.RegistrationScreen
 import com.example.medipoint.ui.theme.Viewmodels.AuthViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.compose.currentBackStackEntryAsState
 
-enum class MedipointScreens {
-    HomeScreen,
-    BookingScreen,
-    AppointmentDetailScreen,
-    ProfileScreen,
-    LoginScreen,
-    RegistrationScreen
+enum class MedipointScreens(val route: String) {
+    HomeScreen("home"),
+    BookingScreen("booking"),
+    AppointmentDetailScreen("appointmentDetail/{appointmentId}"),
+    ProfileScreen("profile"),
+    LoginScreen("login"),
+    RegistrationScreen("registration");
+
+    companion object {
+        fun appointmentDetail(appointmentId: Any?): String {
+            return "appointmentDetail/$appointmentId"
+        }
+    }
 }
 
 @Composable
@@ -60,7 +70,6 @@ fun MediPointApp() {
     var isLoggedIn by remember { mutableStateOf(Firebase.auth.currentUser != null) }
     val authViewModel: AuthViewModel = viewModel()
 
-    // If user is logged in, show main app, otherwise show auth screens
     if (isLoggedIn) {
         MainAppContent(
             onSignOut = {
@@ -82,14 +91,12 @@ fun MediPointApp() {
                 RegistrationScreen(
                     authViewModel = authViewModel,
                     onRegistrationSuccess = {
-                        // After successful registration, go back to login
                         currentScreen = MedipointScreens.LoginScreen
                     },
                     onBackToLogin = { currentScreen = MedipointScreens.LoginScreen }
                 )
             }
             else -> {
-                // Fallback to login screen
                 LoginScreen(
                     authViewModel = authViewModel,
                     onLoginSuccess = { isLoggedIn = true },
@@ -115,9 +122,11 @@ fun MainAppContent(onSignOut: () -> Unit) {
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack,
+                        Icon(
+                            Icons.Default.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color.White)
+                            tint = Color.White
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -132,22 +141,30 @@ fun MainAppContent(onSignOut: () -> Unit) {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = MedipointScreens.HomeScreen.name,
+            startDestination = MedipointScreens.HomeScreen.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(route = MedipointScreens.HomeScreen.name) {
+            composable(route = MedipointScreens.HomeScreen.route) {
                 HomeScreen(
-                    onBookAppointmentClick = {navController.navigate(MedipointScreens.BookingScreen.name)},
-                    onDetailClick = {navController.navigate(MedipointScreens.AppointmentDetailScreen.name)}
+                    onBookAppointmentClick = {
+                        navController.navigate(MedipointScreens.BookingScreen.route)
+                    },
+                    onDetailClick = { appointmentId ->
+                        navController.navigate(MedipointScreens.appointmentDetail(appointmentId))
+                    }
                 )
             }
-            composable(route = MedipointScreens.BookingScreen.name) {
+            composable(route = MedipointScreens.BookingScreen.route) {
                 BookingScreen()
             }
-            composable(route = MedipointScreens.AppointmentDetailScreen.name) {
-                AppointmentDetailScreen()
+            composable(
+                route = MedipointScreens.AppointmentDetailScreen.route,
+                arguments = listOf(navArgument("appointmentId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val appointmentId = backStackEntry.arguments?.getString("appointmentId") ?: ""
+                AppointmentDetailScreen(appointmentId = appointmentId)
             }
-            composable(route = MedipointScreens.ProfileScreen.name) {
+            composable(route = MedipointScreens.ProfileScreen.route) {
                 ProfileScreen(onSignOut = onSignOut)
             }
         }
@@ -161,14 +178,14 @@ fun BottomNavigationBar(navController: NavHostController) {
 
     NavigationBar {
         NavigationBarItem(
-            selected = currentRoute == MedipointScreens.HomeScreen.name,
-            onClick = { navController.navigate(MedipointScreens.HomeScreen.name) },
+            selected = currentRoute == MedipointScreens.HomeScreen.route,
+            onClick = { navController.navigate(MedipointScreens.HomeScreen.route) },
             icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
             label = { Text("Home") }
         )
         NavigationBarItem(
-            selected = currentRoute == MedipointScreens.BookingScreen.name,
-            onClick = { navController.navigate(MedipointScreens.BookingScreen.name) },
+            selected = currentRoute == MedipointScreens.BookingScreen.route,
+            onClick = { navController.navigate(MedipointScreens.BookingScreen.route) },
             icon = { Icon(Icons.Default.DateRange, contentDescription = "Book") },
             label = { Text("Book") }
         )
@@ -180,7 +197,7 @@ fun BottomNavigationBar(navController: NavHostController) {
         )
         NavigationBarItem(
             selected = false,
-            onClick = { navController.navigate(MedipointScreens.ProfileScreen.name) },
+            onClick = { navController.navigate(MedipointScreens.ProfileScreen.route) },
             icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
             label = { Text("Profile") }
         )

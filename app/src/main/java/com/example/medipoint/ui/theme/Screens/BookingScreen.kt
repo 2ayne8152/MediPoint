@@ -151,12 +151,22 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
         Button(
             onClick = {
                 viewModel.saveAppointment(
-                    selectedDoctor, appointmentType, selectedDate, preferredTime, notes,
-                    onSuccess = {},
-                    onFailure = {}
+                    doctorName = selectedDoctor,
+                    appointmentType = appointmentType,
+                    date = selectedDate,
+                    time = preferredTime,
+                    notes = notes,
+                    onSuccess = {
+                        // TODO: maybe navigate to Home or AppointmentDetailScreen
+                    },
+                    onFailure = { e ->
+                        // TODO: show error with Snackbar/Toast
+                    }
                 )
             },
-            modifier = Modifier.fillMaxWidth().height(50.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00001A)),
             shape = RoundedCornerShape(12.dp)
         ) {
