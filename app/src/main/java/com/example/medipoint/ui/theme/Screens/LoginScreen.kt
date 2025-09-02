@@ -34,7 +34,7 @@ import com.google.firebase.auth.FirebaseAuth
 fun LoginScreen(
     authViewModel: AuthViewModel = viewModel(),
     onLoginSuccess: () -> Unit,
-    onNavigateToRegistration: () -> Unit // Add this parameter
+    onNavigateToRegistration: () -> Unit 
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }

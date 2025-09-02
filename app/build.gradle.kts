@@ -71,10 +71,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
-    // Cloud Firestore SDK
-    implementation("com.google.firebase:firebase-firestore-ktx")
-
-
     // Google location services
     implementation("com.google.android.gms:play-services-location:21.3.0")
 
