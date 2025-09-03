@@ -52,15 +52,19 @@ import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 
-
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
 fun AppointmentDetailScreen(
-    appointmentId: String,   // <-- Now required
+    appointmentId: String,
     viewModel: CheckInViewModel = viewModel()
 ) {
     val checkInRecord by viewModel.checkInRecord.collectAsState()
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
+
+    // ✅ Load existing check-in when screen opens
+    LaunchedEffect(appointmentId) {
+        viewModel.loadUserCheckInRecord(appointmentId)
+    }
 
     Column(
         modifier = Modifier
@@ -109,159 +113,89 @@ fun AppointmentDetailScreen(
             }
         }
 
+        // ✅ Check-in Card
         CheckInCard(
-            checkInRecord = checkInRecord,
+            checkInRecord = checkInRecord ?: CheckInRecord(),
             appointmentId = appointmentId,
             viewModel = viewModel
         )
 
         // Location & Directions Card
-
         Card(
-
             shape = RoundedCornerShape(16.dp),
-
             modifier = Modifier
-
                 .fillMaxWidth()
-
                 .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp)),
-
             elevation = CardDefaults.cardElevation(4.dp),
-
             colors = CardDefaults.cardColors(containerColor = Color.White)
-
         ) {
-
             Column(modifier = Modifier.padding(16.dp)) {
-
                 Text(
-
                     stringResource(R.string.location_directions),
-
                     style = MaterialTheme.typography.titleMedium
-
                 )
-
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Card(
-
                     modifier = Modifier
-
                         .fillMaxWidth()
-
                         .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp)),
-
                     colors = CardDefaults.cardColors(
-
                         containerColor = MaterialTheme.colorScheme.surfaceContainer
-
                     )
-
                 ) {
-
                     Row {
-
                         Spacer(modifier = Modifier.width(16.dp))
-
                         Column(
-
                             modifier = Modifier
-
                                 .fillMaxWidth()
-
                                 .padding(12.dp)
-
                         ) {
-
                             Text("Main Building", style = MaterialTheme.typography.bodyLarge)
-
                             Text(
-
                                 "2nd Floor\nRoom 201",
-
                                 style = MaterialTheme.typography.bodySmall,
-
                                 color = Color.Gray
-
                             )
-
                         }
-
                     }
-
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-
                 Text(
-
                     text = stringResource(R.string.get_directions),
-
                     style = MaterialTheme.typography.titleMedium
-
                 )
-
                 Spacer(modifier = Modifier.height(8.dp))
-
                 DirectionButton("Open Google Map")
-
             }
-
         }
-
 
         // Preparation Tips
-
         Card(
-
             shape = RoundedCornerShape(16.dp),
-
             modifier = Modifier
-
                 .fillMaxWidth()
-
                 .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp)),
-
             elevation = CardDefaults.cardElevation(4.dp),
-
             colors = CardDefaults.cardColors(containerColor = Color.White)
-
         ) {
-
             Column {
-
                 Text(
-
                     "Preparation Tips",
-
                     style = MaterialTheme.typography.titleMedium,
-
                     modifier = Modifier.padding(16.dp)
-
                 )
-
                 Text(
-
                     "• Arrive 15 minutes early for check-in\n\n" +
-
                             "• Bring your insurance card and ID\n\n" +
-
                             "• List of current medications\n\n" +
-
                             "• Any questions or concerns to discuss",
-
                     style = MaterialTheme.typography.bodyMedium,
-
                     modifier = Modifier.padding(16.dp)
-
                 )
-
             }
-
         }
-
     }
 }
 
@@ -281,7 +215,7 @@ fun AppointmentInfoRow(icon: ImageVector, text: String) {
 @Composable
 fun CheckInCard(
     checkInRecord: CheckInRecord,
-    appointmentId: String,   // <-- required here
+    appointmentId: String,
     viewModel: CheckInViewModel = viewModel(),
     locationPermission: PermissionState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
 ) {
@@ -307,14 +241,13 @@ fun CheckInCard(
             if (checkInRecord.checkedIn) {
                 Text("Checked in successfully!")
 
-                LaunchedEffect(checkInRecord.checkedIn) {
+                LaunchedEffect(Unit) {
                     Toast.makeText(context, "Checked in successfully!", Toast.LENGTH_SHORT).show()
                 }
             } else {
                 Button(
                     onClick = {
                         if (locationPermission.status.isGranted) {
-                            // ✅ Pass appointmentId to viewModel
                             viewModel.attemptCheckIn(appointmentId)
                         } else {
                             locationPermission.launchPermissionRequest()
@@ -327,12 +260,6 @@ fun CheckInCard(
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
                 ) {
                     Text("Tap to Check In")
-                }
-
-                LaunchedEffect(checkInRecord.checkedIn) {
-                    if (!checkInRecord.checkedIn) {
-                        Toast.makeText(context, "Check-in Failed!", Toast.LENGTH_SHORT).show()
-                    }
                 }
             }
         }
@@ -353,5 +280,4 @@ fun DirectionButton(label: String) {
     ) {
         Text(label)
     }
-
 }

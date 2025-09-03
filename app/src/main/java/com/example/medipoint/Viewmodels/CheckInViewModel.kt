@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.medipoint.Data.CheckInRecord
 import com.google.android.gms.location.LocationServices
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,17 +20,20 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
     private val checkInRadius = 200 // meters
 
     private val db = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth.getInstance()
     private val fusedLocationClient =
         LocationServices.getFusedLocationProviderClient(application)
 
-    private val _checkInRecord = MutableStateFlow(CheckInRecord())
-    val checkInRecord: StateFlow<CheckInRecord> = _checkInRecord
+    private val _checkInRecord = MutableStateFlow<CheckInRecord?>(null)
+    val checkInRecord: StateFlow<CheckInRecord?> = _checkInRecord
 
     /**
-     * Attempt to check in for a specific appointment
+     * Try to check in for a specific appointment (only once per user).
      */
     @SuppressLint("MissingPermission")
     fun attemptCheckIn(appointmentId: String) {
+        val currentUser = auth.currentUser ?: return
+
         viewModelScope.launch {
             try {
                 val location = fusedLocationClient.lastLocation.await()
@@ -46,10 +50,12 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
                             checkedIn = true,
                             checkInTime = System.currentTimeMillis(),
                             checkInLat = location.latitude,
-                            checkInLng = location.longitude
+                            checkInLng = location.longitude,
+                            userId = currentUser.uid,         // ✅ store userId
+                            appointmentId = appointmentId     // ✅ store appointmentId
                         )
-                        _checkInRecord.value = record
                         saveCheckInRecord(appointmentId, record)
+                        _checkInRecord.value = record
                     } else {
                         _checkInRecord.value = CheckInRecord(checkedIn = false)
                     }
@@ -64,17 +70,16 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /**
-     * Save record under the appointment's subcollection
+     * Save record under the appointment’s subcollection.
+     * One record per user per appointment.
      */
     private fun saveCheckInRecord(appointmentId: String, record: CheckInRecord) {
         val checkInRef = db.collection("appointments")
             .document(appointmentId)
             .collection("checkin")
-            .document()
+            .document(record.userId) // ✅ use userId as the doc ID so it's unique per user
 
-        val recordWithId = record.copy(id = checkInRef.id)
-
-        checkInRef.set(recordWithId)
+        checkInRef.set(record)
             .addOnSuccessListener {
                 android.util.Log.d("Firestore", "Check-in saved!")
             }
@@ -84,20 +89,34 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /**
-     * Load all check-ins for an appointment
+     * Load the current user’s check-in for an appointment.
      */
-    fun loadCheckInRecords(appointmentId: String, onResult: (List<CheckInRecord>) -> Unit) {
+    fun loadUserCheckInRecord(appointmentId: String) {
+        val currentUser = auth.currentUser ?: return
+
         db.collection("appointments")
             .document(appointmentId)
             .collection("checkin")
+            .document(currentUser.uid)
             .get()
-            .addOnSuccessListener { result ->
-                val records = result.mapNotNull { it.toObject(CheckInRecord::class.java) }
-                onResult(records)
+            .addOnSuccessListener { document ->
+                if (document.exists()) {
+                    val record = document.toObject(CheckInRecord::class.java)
+                    _checkInRecord.value = record
+                } else {
+                    _checkInRecord.value = null
+                }
             }
             .addOnFailureListener { e ->
-                android.util.Log.e("Firestore", "Error loading check-ins", e)
-                onResult(emptyList())
+                android.util.Log.e("Firestore", "Error loading check-in", e)
+                _checkInRecord.value = null
             }
+    }
+
+    /**
+     * Allows UI to set the record manually (optional).
+     */
+    fun setCheckInRecord(record: CheckInRecord?) {
+        _checkInRecord.value = record
     }
 }

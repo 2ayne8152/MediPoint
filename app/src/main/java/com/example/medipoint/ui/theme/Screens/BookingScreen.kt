@@ -54,6 +54,12 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
 
     var notes by remember { mutableStateOf("") }
 
+    // ✅ Only enable button if all required fields are filled
+    val isFormValid = selectedDoctor.isNotBlank() &&
+            appointmentType.isNotBlank() &&
+            selectedDate.isNotBlank() &&
+            preferredTime.isNotBlank()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -157,23 +163,32 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
                     time = preferredTime,
                     notes = notes,
                     onSuccess = {
-                        // TODO: maybe navigate to Home or AppointmentDetailScreen
+                        // Clear form on success
+                        selectedDoctor = ""
+                        appointmentType = ""
+                        selectedDate = ""
+                        preferredTime = ""
+                        notes = ""
                     },
                     onFailure = { e ->
                         // TODO: show error with Snackbar/Toast
                     }
                 )
             },
+            enabled = isFormValid,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00001A)),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isFormValid) Color(0xFF00001A) else Color.Gray
+            ),
             shape = RoundedCornerShape(12.dp)
         ) {
             Text("Request Appointment", color = Color.White)
         }
     }
 }
+
 
 private fun showAndroidDatePicker(context: Context, calendar: Calendar, onDateSelected: (String) -> Unit) {
     DatePickerDialog(

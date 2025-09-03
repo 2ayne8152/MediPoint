@@ -8,5 +8,5 @@ data class Appointment(
     val time: String = "",
     val status: String = "Scheduled",
     val notes: String = "",
-    val checkInRecord: CheckInRecord? = null
+    val checkInRecord: CheckInRecord? = null // optional: embed latest check-in
 )
