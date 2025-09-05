@@ -50,9 +50,7 @@ fun HomeScreen(
 
     // Start listening once when the screen enters
     LaunchedEffect(Unit) {
-        bookingViewModel.startAppointmentsListener(
-            userId = null // or pass your real userId if you store it
-        )
+        bookingViewModel.startAppointmentsListener()
     }
 
     Column(

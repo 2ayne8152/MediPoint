@@ -2,6 +2,7 @@ package com.example.medipoint.Viewmodels
 
 import androidx.lifecycle.ViewModel
 import com.example.medipoint.Data.Appointment
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 class BookingViewModel : ViewModel() {
 
     private val db = FirebaseFirestore.getInstance()
+    private val auth = FirebaseAuth.getInstance()
 
     private val _appointments = MutableStateFlow<List<Appointment>>(emptyList())
     val appointments: StateFlow<List<Appointment>> = _appointments
@@ -24,7 +26,10 @@ class BookingViewModel : ViewModel() {
     fun startAppointmentsListener(userId: String? = null) {
         stopAppointmentsListener()
 
+        val currentUserId = auth.currentUser?.uid ?: return
+
         var query = db.collection("appointments")
+            .whereEqualTo("userId", currentUserId)
         // If you later add userId in each appointment document, uncomment:
         // if (userId != null) query = query.whereEqualTo("userId", userId)
 
@@ -59,7 +64,10 @@ class BookingViewModel : ViewModel() {
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit
     ) {
+        val currentUserId = auth.currentUser?.uid ?: return
+
         val newAppointment = hashMapOf(
+            "userId" to currentUserId,
             "doctorName" to doctorName,
             "appointmentType" to appointmentType,
             "date" to date,
@@ -73,7 +81,6 @@ class BookingViewModel : ViewModel() {
             .addOnSuccessListener { onSuccess() }
             .addOnFailureListener { e -> onFailure(e) }
     }
-
 }
 
 /**
@@ -101,6 +108,4 @@ private fun DocumentSnapshot.toAppointment(): Appointment {
         notes = notes,
         checkInRecord = null
     )
-
-
 }

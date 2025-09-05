@@ -2,6 +2,7 @@ package com.example.medipoint.Data
 
 data class Appointment(
     val id: String = "",
+    val userId: String = "",
     val doctorName: String = "",
     val appointmentType: String = "",
     val date: String = "",
