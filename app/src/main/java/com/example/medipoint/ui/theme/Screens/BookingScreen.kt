@@ -10,12 +10,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -118,8 +121,21 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
             readOnly = true,
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { showAndroidDatePicker(context, calendar) { date -> selectedDate = date } }
+                .clickable {
+                    showAndroidDatePicker(context, calendar) { date -> selectedDate = date }
+                },
+            trailingIcon = {
+                Icon(
+                    imageVector = Icons.Filled.DateRange,
+                    contentDescription = "Pick a date",
+                    modifier = Modifier.clickable {
+                        showAndroidDatePicker(context, calendar) { date -> selectedDate = date }
+                    }
+                )
+            }
         )
+
+
 
         Spacer(Modifier.height(16.dp))
 
