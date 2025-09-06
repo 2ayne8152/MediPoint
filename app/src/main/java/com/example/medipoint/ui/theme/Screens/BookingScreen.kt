@@ -2,6 +2,7 @@ package com.example.medipoint.ui.theme.Screens
 
 import android.app.DatePickerDialog
 import android.content.Context
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -54,7 +55,6 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
     var expandedTime by remember { mutableStateOf(false) }
 
     var selectedDate by remember { mutableStateOf("") }
-
     var notes by remember { mutableStateOf("") }
 
     // ✅ Only enable button if all required fields are filled
@@ -72,7 +72,10 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
         Spacer(Modifier.height(16.dp))
 
         // Doctor dropdown
-        ExposedDropdownMenuBox(expanded = expandedDoctor, onExpandedChange = { expandedDoctor = !expandedDoctor }) {
+        ExposedDropdownMenuBox(
+            expanded = expandedDoctor,
+            onExpandedChange = { expandedDoctor = !expandedDoctor }
+        ) {
             TextField(
                 value = selectedDoctor,
                 onValueChange = {},
@@ -85,7 +88,13 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
             )
             ExposedDropdownMenu(expanded = expandedDoctor, onDismissRequest = { expandedDoctor = false }) {
                 listOf("Dr. Johnson", "Dr. Lee", "Dr. Smith").forEach { doc ->
-                    DropdownMenuItem(text = { Text(doc) }, onClick = { selectedDoctor = doc; expandedDoctor = false })
+                    DropdownMenuItem(
+                        text = { Text(doc) },
+                        onClick = {
+                            selectedDoctor = doc
+                            expandedDoctor = false
+                        }
+                    )
                 }
             }
         }
@@ -93,7 +102,10 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
         Spacer(Modifier.height(16.dp))
 
         // Appointment type dropdown
-        ExposedDropdownMenuBox(expanded = expandedType, onExpandedChange = { expandedType = !expandedType }) {
+        ExposedDropdownMenuBox(
+            expanded = expandedType,
+            onExpandedChange = { expandedType = !expandedType }
+        ) {
             TextField(
                 value = appointmentType,
                 onValueChange = {},
@@ -106,7 +118,13 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
             )
             ExposedDropdownMenu(expanded = expandedType, onDismissRequest = { expandedType = false }) {
                 listOf("General Checkup", "Consultation", "Follow-up").forEach { type ->
-                    DropdownMenuItem(text = { Text(type) }, onClick = { appointmentType = type; expandedType = false })
+                    DropdownMenuItem(
+                        text = { Text(type) },
+                        onClick = {
+                            appointmentType = type
+                            expandedType = false
+                        }
+                    )
                 }
             }
         }
@@ -135,12 +153,13 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
             }
         )
 
-
-
         Spacer(Modifier.height(16.dp))
 
         // Time dropdown
-        ExposedDropdownMenuBox(expanded = expandedTime, onExpandedChange = { expandedTime = !expandedTime }) {
+        ExposedDropdownMenuBox(
+            expanded = expandedTime,
+            onExpandedChange = { expandedTime = !expandedTime }
+        ) {
             TextField(
                 value = preferredTime,
                 onValueChange = {},
@@ -153,7 +172,13 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
             )
             ExposedDropdownMenu(expanded = expandedTime, onDismissRequest = { expandedTime = false }) {
                 listOf("09:00 AM", "10:30 AM", "02:00 PM", "04:00 PM").forEach { time ->
-                    DropdownMenuItem(text = { Text(time) }, onClick = { preferredTime = time; expandedTime = false })
+                    DropdownMenuItem(
+                        text = { Text(time) },
+                        onClick = {
+                            preferredTime = time
+                            expandedTime = false
+                        }
+                    )
                 }
             }
         }
@@ -179,15 +204,18 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
                     time = preferredTime,
                     notes = notes,
                     onSuccess = {
-                        // Clear form on success
+                        // ✅ Clear form on success
                         selectedDoctor = ""
                         appointmentType = ""
                         selectedDate = ""
                         preferredTime = ""
                         notes = ""
+
+                        // ✅ Show Toast
+                        Toast.makeText(context, "Appointment requested successfully!", Toast.LENGTH_SHORT).show()
                     },
                     onFailure = { e ->
-                        // TODO: show error with Snackbar/Toast
+                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
                     }
                 )
             },
@@ -204,7 +232,6 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
         }
     }
 }
-
 
 private fun showAndroidDatePicker(context: Context, calendar: Calendar, onDateSelected: (String) -> Unit) {
     DatePickerDialog(
