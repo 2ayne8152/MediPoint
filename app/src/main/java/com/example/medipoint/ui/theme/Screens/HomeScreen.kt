@@ -52,7 +52,7 @@ fun HomeScreen(
     // Start listening once when the screen enters
     LaunchedEffect(Unit) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: "TEST_USER"
-        bookingViewModel.startAppointmentsListener(userId)
+        bookingViewModel.startAppointmentsListener()
     }
 
     Column(
