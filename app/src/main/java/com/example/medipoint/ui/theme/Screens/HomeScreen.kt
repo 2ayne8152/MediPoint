@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.medipoint.R
 import com.example.medipoint.Viewmodels.BookingViewModel
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun HomeScreen(
@@ -50,7 +51,8 @@ fun HomeScreen(
 
     // Start listening once when the screen enters
     LaunchedEffect(Unit) {
-        bookingViewModel.startAppointmentsListener()
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: "TEST_USER"
+        bookingViewModel.startAppointmentsListener(userId)
     }
 
     Column(

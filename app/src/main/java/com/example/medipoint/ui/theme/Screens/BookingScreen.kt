@@ -24,6 +24,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,11 +59,29 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
     var selectedDate by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
 
-    // ✅ Only enable button if all required fields are filled
     val isFormValid = selectedDoctor.isNotBlank() &&
             appointmentType.isNotBlank() &&
             selectedDate.isNotBlank() &&
             preferredTime.isNotBlank()
+
+    val saveStatus by viewModel.saveStatus.collectAsState()
+
+    LaunchedEffect(saveStatus) {
+        saveStatus?.let { result ->
+            result.onSuccess {
+                Toast.makeText(context, "Appointment requested successfully!", Toast.LENGTH_SHORT).show()
+
+                selectedDoctor = ""
+                appointmentType = ""
+                selectedDate = ""
+                preferredTime = ""
+                notes = ""
+            }
+            result.onFailure { e ->
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -195,6 +215,7 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
 
         Spacer(Modifier.height(24.dp))
 
+        // Save button
         Button(
             onClick = {
                 viewModel.saveAppointment(
@@ -203,20 +224,7 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
                     date = selectedDate,
                     time = preferredTime,
                     notes = notes,
-                    onSuccess = {
-                        // ✅ Clear form on success
-                        selectedDoctor = ""
-                        appointmentType = ""
-                        selectedDate = ""
-                        preferredTime = ""
-                        notes = ""
-
-                        // ✅ Show Toast
-                        Toast.makeText(context, "Appointment requested successfully!", Toast.LENGTH_SHORT).show()
-                    },
-                    onFailure = { e ->
-                        Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                    }
+                    userId = "CURRENT_USER_ID" // 🔑 replace with FirebaseAuth.getInstance().currentUser?.uid
                 )
             },
             enabled = isFormValid,

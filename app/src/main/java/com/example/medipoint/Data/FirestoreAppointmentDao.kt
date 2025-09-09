@@ -1,5 +1,6 @@
 package com.example.medipoint.Data
 
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.tasks.await
 
@@ -9,16 +10,9 @@ class FirestoreAppointmentDao(
 
     override suspend fun addAppointment(appointment: Appointment): Result<Unit> {
         return try {
-            val map = hashMapOf(
-                "doctorName" to appointment.doctorName,
-                "appointmentType" to appointment.appointmentType,
-                "date" to appointment.date,
-                "time" to appointment.time,
-                "status" to appointment.status,
-                "notes" to appointment.notes,
-                "userId" to appointment.userId // 🔑 make user-specific
-            )
-            db.collection("appointments").add(map).await()
+            db.collection("appointments")
+                .add(appointment) // 👈 Directly store the data class
+                .await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -31,7 +25,8 @@ class FirestoreAppointmentDao(
                 .whereEqualTo("userId", userId)
                 .get()
                 .await()
-            val appointments = snapshot.documents.map { it.toAppointment() }
+
+            val appointments = snapshot.documents.mapNotNull { it.toAppointment() }
             Result.success(appointments)
         } catch (e: Exception) {
             Result.failure(e)
@@ -50,8 +45,16 @@ class FirestoreAppointmentDao(
                     onError(e)
                     return@addSnapshotListener
                 }
-                val appointments = snapshot?.documents?.map { it.toAppointment() } ?: emptyList()
+                val appointments = snapshot?.documents?.mapNotNull { it.toAppointment() } ?: emptyList()
                 onDataChange(appointments)
             }
+    }
+}
+
+private fun DocumentSnapshot.toAppointment(): Appointment? {
+    return try {
+        this.toObject(Appointment::class.java)
+    } catch (e: Exception) {
+        null
     }
 }
