@@ -10,9 +10,29 @@ class FirestoreAppointmentDao(
 
     override suspend fun addAppointment(appointment: Appointment): Result<Unit> {
         return try {
-            db.collection("appointments")
-                .add(appointment)
+            // Check if appointment already exists for same doctor/date/time
+            val existing = db.collection("appointments")
+                .whereEqualTo("doctorName", appointment.doctorName)
+                .whereEqualTo("date", appointment.date)
+                .whereEqualTo("time", appointment.time)
+                .get()
                 .await()
+
+            if (!existing.isEmpty) {
+                return Result.failure(Exception("This doctor already has an appointment at that time."))
+            }
+
+            // If no conflict, add appointment
+            val map = hashMapOf(
+                "doctorName" to appointment.doctorName,
+                "appointmentType" to appointment.appointmentType,
+                "date" to appointment.date,
+                "time" to appointment.time,
+                "status" to appointment.status,
+                "notes" to appointment.notes,
+                "userId" to appointment.userId
+            )
+            db.collection("appointments").add(map).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -49,6 +69,7 @@ class FirestoreAppointmentDao(
                 onDataChange(appointments)
             }
     }
+
 }
 
 private fun DocumentSnapshot.toAppointment(): Appointment? {
