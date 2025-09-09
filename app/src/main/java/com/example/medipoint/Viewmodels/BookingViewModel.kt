@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.medipoint.Data.Appointment
 import com.example.medipoint.Data.FirestoreAppointmentDao
 import com.example.medipoint.Repository.AppointmentRepository
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -22,7 +23,8 @@ class BookingViewModel(
     /**
      * Start listening for realtime updates to this user's appointments.
      */
-    fun startAppointmentsListener(userId: String) {
+    fun startAppointmentsListener() {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
         repository.listenAppointments(
             userId = userId,
             onDataChange = { list -> _appointments.value = list },
@@ -38,9 +40,10 @@ class BookingViewModel(
         appointmentType: String,
         date: String,
         time: String,
-        notes: String,
-        userId: String
+        notes: String
     ) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+
         val newAppointment = Appointment(
             doctorName = doctorName,
             appointmentType = appointmentType,

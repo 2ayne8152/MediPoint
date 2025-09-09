@@ -11,7 +11,7 @@ class FirestoreAppointmentDao(
     override suspend fun addAppointment(appointment: Appointment): Result<Unit> {
         return try {
             db.collection("appointments")
-                .add(appointment) // 👈 Directly store the data class
+                .add(appointment)
                 .await()
             Result.success(Unit)
         } catch (e: Exception) {

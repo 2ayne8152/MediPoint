@@ -223,8 +223,7 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
                     appointmentType = appointmentType,
                     date = selectedDate,
                     time = preferredTime,
-                    notes = notes,
-                    userId = "CURRENT_USER_ID" // 🔑 replace with FirebaseAuth.getInstance().currentUser?.uid
+                    notes = notes
                 )
             },
             enabled = isFormValid,
