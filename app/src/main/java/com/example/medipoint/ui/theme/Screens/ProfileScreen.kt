@@ -1,5 +1,6 @@
 package com.example.medipoint.ui.theme.Screens
 
+import android.widget.Toast
 import com.example.medipoint.Viewmodels.ProfileViewModel
 import com.example.medipoint.Viewmodels.UserProfile
 import androidx.compose.foundation.border
@@ -55,20 +56,29 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.collectAsState
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+
+
 @Composable
-fun ProfileScreen(onSignOut: () -> Unit,
-                  profileViewModel: ProfileViewModel = viewModel()) {
-    val viewModel: ProfileViewModel = viewModel()
-    val userProfile: UserProfile? by profileViewModel.userProfile.collectAsState()
-    val saveStatus: String? by profileViewModel.saveStatus.collectAsState()
+fun ProfileScreen(
+    onSignOut: () -> Unit,
+    profileViewModel: ProfileViewModel = viewModel() // Use the injected ViewModel
+) {
+    // val viewModel: ProfileViewModel = viewModel() // Remove this line
+    val userProfile by profileViewModel.userProfile.collectAsState()
+    val saveStatus by profileViewModel.saveStatus.collectAsState()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    // Show save status messages
+    // State to control the visibility of the edit profile dialog
+    var showEditProfileDialog by remember { mutableStateOf(false) }
+
+    // Show save status messages (Toast)
     LaunchedEffect(saveStatus) {
         saveStatus?.let { message ->
-            android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
-            viewModel.clearSaveStatus()
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            profileViewModel.clearSaveStatus() // Use the injected ViewModel instance
         }
     }
 
@@ -80,39 +90,57 @@ fun ProfileScreen(onSignOut: () -> Unit,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         userProfile?.let { profile ->
-            ProfileCard(
+            ProfileCard( // Pass the current profile
                 profile = profile,
+                // Remove onPhoneNumberChange from here, it will be handled by the dialog
                 onUsernameChange = { newName ->
                     coroutineScope.launch {
-                        viewModel.updateDisplayName(newName)
-                    }
-                },
-                onPhoneNumberChange = { newPhone ->
-                    coroutineScope.launch {
-                        viewModel.updatePhoneNumber(newPhone)
+                        profileViewModel.updateDisplayName(newName)
                     }
                 }
             )
+
+            // When the dialog is shown, pass the current phone number and lambdas for actions
+            if (showEditProfileDialog) {
+                EditProfileDialog(
+                    currentPhoneNumber = profile.phoneNumber ?: "",
+                    onDismissRequest = { showEditProfileDialog = false },
+                    onApplyChanges = { newPhoneNumber ->
+                        coroutineScope.launch {
+                            profileViewModel.updatePhoneNumber(newPhoneNumber)
+                        }
+                        showEditProfileDialog = false // Close dialog after applying
+                    }
+                )
+            }
+
         } ?: Text("Loading user profile...")
 
         Spacer(modifier = Modifier.height(16.dp))
         MedicalInfoCard()
         Spacer(modifier = Modifier.height(16.dp))
-        OptionsSection(onSignOut = onSignOut)
+        OptionsSection(
+            onSignOut = onSignOut,
+            onEditProfileClicked = {
+                showEditProfileDialog = true // Show the dialog
+            }
+        )
     }
 }
+
 
 @Composable
 fun ProfileCard(
     profile: UserProfile,
-    onUsernameChange: (String) -> Unit,
-    onPhoneNumberChange: (String) -> Unit
+    onUsernameChange: (String) -> Unit
+    // Removed: onPhoneNumberChange: (String) -> Unit
 ) {
-    var isEditingUsername by remember { mutableStateOf(false) }
+    var isEditingUsername by remember { mutableStateOf(false) } // Initially not editing
     var editableUsername by remember { mutableStateOf(profile.displayName ?: "") }
 
-    var isEditingPhoneNumber by remember { mutableStateOf(false) }
-    var editablePhoneNumber by remember { mutableStateOf(profile.phoneNumber ?: "") }
+    // Removed state for phone number editing
+    // var isEditingPhoneNumber by remember { mutableStateOf(false) }
+    // var editablePhoneNumber by remember { mutableStateOf(profile.phoneNumber ?: "") }
 
     val focusManager = LocalFocusManager.current
 
@@ -125,7 +153,7 @@ fun ProfileCard(
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Username Row
+            // Username Row (remains the same)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -156,7 +184,7 @@ fun ProfileCard(
                         }
                         IconButton(onClick = {
                             isEditingUsername = false
-                            editableUsername = profile.displayName ?: ""
+                            editableUsername = profile.displayName ?: "" // Reset on cancel
                             focusManager.clearFocus()
                         }) {
                             Icon(Icons.Filled.Close, contentDescription = "Cancel Username Edit")
@@ -170,8 +198,9 @@ fun ProfileCard(
                         color = if (profile.displayName != null) MaterialTheme.colorScheme.onSurface else Color.Gray,
                         modifier = Modifier
                             .weight(1f)
-                            .clickable(enabled = profile.displayName == null) {
+                            .clickable(enabled = profile.displayName == null) { // Keep username clickable if null
                                 if (profile.displayName == null) {
+                                    editableUsername = "" // Start with empty for new username
                                     isEditingUsername = true
                                 }
                             }
@@ -185,16 +214,16 @@ fun ProfileCard(
                 }
             }
 
-            // Email
+            // Email (remains the same)
             Text(
                 text = profile.email ?: "No email provided",
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.secondary
             )
 
-            // Phone Number Row
+            // Phone Number Row - Now displays phone number read-only
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp), // Added some top padding
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
@@ -202,62 +231,72 @@ fun ProfileCard(
                     contentDescription = "Contact Number Icon",
                     modifier = Modifier.padding(end = 6.dp)
                 )
-                if (isEditingPhoneNumber) {
-                    OutlinedTextField(
-                        value = editablePhoneNumber,
-                        onValueChange = { editablePhoneNumber = it },
-                        label = { Text("Phone Number") },
-                        singleLine = true,
-                        modifier = Modifier.weight(1f),
-                        keyboardOptions = KeyboardOptions.Default.copy(
-                            imeAction = ImeAction.Done,
-                            keyboardType = KeyboardType.Phone
-                        ),
-                        keyboardActions = KeyboardActions(onDone = {
-                            onPhoneNumberChange(editablePhoneNumber)
-                            isEditingPhoneNumber = false
-                            focusManager.clearFocus()
-                        }),
-                    )
-                    IconButton(onClick = {
-                        onPhoneNumberChange(editablePhoneNumber)
-                        isEditingPhoneNumber = false
-                        focusManager.clearFocus()
-                    }) {
-                        Icon(Icons.Filled.Check, contentDescription = "Save Phone Number")
-                    }
-                    IconButton(onClick = {
-                        isEditingPhoneNumber = false
-                        editablePhoneNumber = profile.phoneNumber ?: ""
-                        focusManager.clearFocus()
-                    }) {
-                        Icon(Icons.Filled.Close, contentDescription = "Cancel Phone Edit")
-                    }
-                } else {
-                    Text(
-                        text = if (profile.phoneNumber.isNullOrBlank()) "Add phone number" else profile.phoneNumber!!,
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 6.dp, top = 12.dp, bottom = 12.dp, end = 12.dp)
-                            .clickable {
-                                editablePhoneNumber = profile.phoneNumber ?: ""
-                                isEditingPhoneNumber = true
-                            },
-                        color = if (profile.phoneNumber.isNullOrBlank()) Color.Gray else MaterialTheme.colorScheme.onSurface,
-                        fontSize = 16.sp
-                    )
-                    IconButton(onClick = {
-                        editablePhoneNumber = profile.phoneNumber ?: ""
-                        isEditingPhoneNumber = true
-                    }) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Edit Phone Number")
-                    }
-                }
+                Text(
+                    text = if (profile.phoneNumber.isNullOrBlank()) "No phone number" else profile.phoneNumber!!,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 6.dp, top = 12.dp, bottom = 12.dp, end = 12.dp), // Adjusted padding
+                    color = if (profile.phoneNumber.isNullOrBlank()) Color.Gray else MaterialTheme.colorScheme.onSurface,
+                    fontSize = 16.sp
+                )
+                // Removed the edit icon and inline editing logic for phone number
             }
-
         }
     }
 }
+
+
+
+@Composable
+fun EditProfileDialog(
+    currentPhoneNumber: String,
+    onDismissRequest: () -> Unit,
+    onApplyChanges: (newPhoneNumber: String) -> Unit
+) {
+    var phoneNumberInput by remember { mutableStateOf(currentPhoneNumber) }
+    val focusManager = LocalFocusManager.current
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text("Edit Profile") },
+        text = {
+            Column {
+                Text("Update your phone number:")
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = phoneNumberInput,
+                    onValueChange = { phoneNumberInput = it },
+                    label = { Text("Phone Number") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(onDone = {
+                        focusManager.clearFocus() // Optionally clear focus on done
+                    }),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                // You could add other fields here later if needed (e.g., username)
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onApplyChanges(phoneNumberInput)
+                }
+            ) {
+                Text("Apply")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
 
 @Composable
 fun MedicalInfoCard() {
@@ -308,7 +347,10 @@ fun MedicalInfoCard() {
 }
 
 @Composable
-fun OptionsSection(onSignOut : () -> Unit) {
+fun OptionsSection(
+    onSignOut: () -> Unit,
+    onEditProfileClicked: () -> Unit // New parameter
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         ProfileButtons(
             text = "Edit Profile",
@@ -318,8 +360,10 @@ fun OptionsSection(onSignOut : () -> Unit) {
                 topEnd = 12.dp,
                 bottomEnd = 0.dp,
                 bottomStart = 0.dp
-            )
+            ),
+            onClick = onEditProfileClicked // Call the new lambda
         )
+        // ... other buttons remain the same
         ProfileButtons(
             text = "Medical Records",
             vector = Icons.Filled.DateRange,
@@ -345,6 +389,7 @@ fun OptionsSection(onSignOut : () -> Unit) {
         )
     }
 }
+
 
 @Composable
 fun ProfileButtons(
