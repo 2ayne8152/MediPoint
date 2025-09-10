@@ -16,7 +16,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -44,6 +43,7 @@ import com.google.firebase.auth.FirebaseAuth
 fun HomeScreen(
     onBookAppointmentClick: () -> Unit,
     onDetailClick: (String) -> Unit,
+    onViewAllClick: () -> Unit,
     bookingViewModel: BookingViewModel = viewModel()
 ) {
     // Collect appointments from the ViewModel
@@ -131,10 +131,13 @@ fun HomeScreen(
             Spacer(
                 modifier = Modifier.padding(6.dp)
             )
-            Icon(
-                imageVector = Icons.Filled.DateRange,
-                contentDescription = null,
-                tint = Color(0xFF0A0A1A)
+            Text(
+                text = "View All",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Blue,
+                modifier = Modifier.clickable {
+                    onViewAllClick()
+                }
             )
         }
 
@@ -148,14 +151,16 @@ fun HomeScreen(
             )
         } else {
             appointments.forEach { appt ->
-                AppointmentCard(
-                    doctor = appt.doctorName,
-                    specialty = appt.appointmentType,
-                    date = appt.date,
-                    time = appt.time,
-                    modifier = Modifier.padding(top = 8.dp),
-                    onDetailClick = { onDetailClick(appt.id) }
-                )
+                if (appt.status == "Scheduled") {
+                    AppointmentCard(
+                        doctor = appt.doctorName,
+                        specialty = appt.appointmentType,
+                        date = appt.date,
+                        time = appt.time,
+                        modifier = Modifier.padding(top = 8.dp),
+                        onDetailClick = { onDetailClick(appt.id) }
+                    )
+                }
             }
         }
     }

@@ -39,6 +39,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.medipoint.ui.theme.Screens.AllAppointmentsScreen
 import com.example.medipoint.ui.theme.Screens.AppointmentDetailScreen
 import com.example.medipoint.ui.theme.Screens.BookingScreen
 import com.example.medipoint.ui.theme.Screens.HomeScreen
@@ -55,7 +56,8 @@ enum class MedipointScreens(val route: String) {
     AppointmentDetailScreen("appointmentDetail/{appointmentId}"),
     ProfileScreen("profile"),
     LoginScreen("login"),
-    RegistrationScreen("registration");
+    RegistrationScreen("registration"),
+    AllAppointmentsScreen("allAppointments");
 
     companion object {
         fun appointmentDetail(appointmentId: String): String {
@@ -151,6 +153,9 @@ fun MainAppContent(onSignOut: () -> Unit) {
                     },
                     onDetailClick = { appointmentId ->
                         navController.navigate(MedipointScreens.appointmentDetail(appointmentId))
+                    },
+                    onViewAllClick = {
+                        navController.navigate(MedipointScreens.AllAppointmentsScreen.route)
                     }
                 )
             }
@@ -166,6 +171,13 @@ fun MainAppContent(onSignOut: () -> Unit) {
             }
             composable(route = MedipointScreens.ProfileScreen.route) {
                 ProfileScreen(onSignOut = onSignOut)
+            }
+            composable(route = MedipointScreens.AllAppointmentsScreen.route) {
+                AllAppointmentsScreen(
+                    onDetailClick = { appointmentId ->
+                        navController.navigate(MedipointScreens.appointmentDetail(appointmentId))
+                    }
+                )
             }
         }
     }
