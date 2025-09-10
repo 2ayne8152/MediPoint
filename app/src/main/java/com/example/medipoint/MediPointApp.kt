@@ -43,6 +43,7 @@ import com.example.medipoint.ui.theme.Screens.AppointmentDetailScreen
 import com.example.medipoint.ui.theme.Screens.BookingScreen
 import com.example.medipoint.ui.theme.Screens.HomeScreen
 import com.example.medipoint.ui.theme.Screens.LoginScreen
+import com.example.medipoint.ui.theme.Screens.MedicalRecordScreen
 import com.example.medipoint.ui.theme.Screens.ProfileScreen
 import com.example.medipoint.ui.theme.Screens.RegistrationScreen
 import com.example.medipoint.ui.theme.Viewmodels.AuthViewModel
@@ -55,7 +56,8 @@ enum class MedipointScreens(val route: String) {
     AppointmentDetailScreen("appointmentDetail/{appointmentId}"),
     ProfileScreen("profile"),
     LoginScreen("login"),
-    RegistrationScreen("registration");
+    RegistrationScreen("registration"),
+    MedicalRecordsScreen("medicalRecords");
 
     companion object {
         fun appointmentDetail(appointmentId: String): String {
@@ -165,7 +167,14 @@ fun MainAppContent(onSignOut: () -> Unit) {
                 AppointmentDetailScreen(appointmentId = appointmentId)
             }
             composable(route = MedipointScreens.ProfileScreen.route) {
-                ProfileScreen(onSignOut = onSignOut)
+                ProfileScreen(onSignOut = onSignOut,
+                    onNavigateToMedicalRecords = { // New navigation callback
+                        navController.navigate(MedipointScreens.MedicalRecordsScreen.route)
+                    })
+            }
+            composable(route = MedipointScreens.MedicalRecordsScreen.route) {
+                // You'll create MedicalRecordScreen and its ViewModel
+                MedicalRecordScreen(viewModel()) // Example: val medicalRecordsViewModel: MedicalRecordsViewModel = viewModel()
             }
         }
     }

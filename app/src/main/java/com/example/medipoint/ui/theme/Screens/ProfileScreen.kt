@@ -69,6 +69,7 @@ import com.example.medipoint.Viewmodels.UserProfile
 @Composable
 fun ProfileScreen(
     onSignOut: () -> Unit,
+    onNavigateToMedicalRecords: () -> Unit,
     profileViewModel: ProfileViewModel = viewModel()
 ) {
     val userProfile by profileViewModel.userProfile.collectAsState()
@@ -169,7 +170,7 @@ fun ProfileScreen(
         OptionsSection(
             onSignOut = onSignOut,
             onEditProfileClicked = { showEditProfileDialog = true },
-            onEditMedicalInfoClicked = { showEditMedicalInfoDialog = true }
+            onNavigateToMedicalRecords =  onNavigateToMedicalRecords
         )
     }
 }
@@ -637,12 +638,12 @@ fun EditMedicalInfoDialog(
 fun OptionsSection(
     onSignOut: () -> Unit,
     onEditProfileClicked: () -> Unit,
-    onEditMedicalInfoClicked: () -> Unit
+    onNavigateToMedicalRecords: () -> Unit // Add this
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         ProfileButtons(
             text = "Edit Profile",
-            vector = Icons.Filled.Create,
+            vector = Icons.Filled.Create, // Make sure you have this icon
             shape = RoundedCornerShape(
                 topStart = 12.dp,
                 topEnd = 12.dp,
@@ -652,10 +653,16 @@ fun OptionsSection(
             onClick = onEditProfileClicked
         )
         ProfileButtons(
+                text = "Medical Records",
+        vector = Icons.Filled.DateRange, // Or another appropriate icon e.g. MedicalServices
+        shape = RoundedCornerShape(0.dp),
+        onClick = onNavigateToMedicalRecords // Navigate on click
+        )
+        ProfileButtons(
             text = "Edit Medical Info",
             vector = Icons.Filled.Edit,
             shape = RoundedCornerShape(0.dp),
-            onClick = onEditMedicalInfoClicked
+            onClick = onNavigateToMedicalRecords
         )
         ProfileButtons(
             text = "Medical Records",
