@@ -5,7 +5,7 @@ import com.example.medipoint.Data.AppointmentDao
 
 class AppointmentRepository(private val dao: AppointmentDao) {
 
-    suspend fun addAppointment(appointment: Appointment): Result<Unit> =
+    suspend fun addAppointment(appointment: Appointment): Result<Appointment> =
         dao.addAppointment(appointment)
 
     suspend fun getAppointments(userId: String): Result<List<Appointment>> =

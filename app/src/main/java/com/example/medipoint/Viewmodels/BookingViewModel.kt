@@ -17,8 +17,8 @@ class BookingViewModel(
     private val _appointments = MutableStateFlow<List<Appointment>>(emptyList())
     val appointments: StateFlow<List<Appointment>> = _appointments
 
-    private val _saveStatus = MutableStateFlow<Result<Unit>?>(null)
-    val saveStatus: StateFlow<Result<Unit>?> = _saveStatus
+    private val _saveStatus = MutableStateFlow<Result<Appointment>?>(null)
+    val saveStatus: StateFlow<Result<Appointment>?> = _saveStatus
 
     /**
      * Start listening for realtime updates to this user's appointments.

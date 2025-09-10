@@ -8,7 +8,7 @@ class FirestoreAppointmentDao(
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) : AppointmentDao {
 
-    override suspend fun addAppointment(appointment: Appointment): Result<Unit> {
+    override suspend fun addAppointment(appointment: Appointment): Result<Appointment> {
         return try {
             // Check if appointment already exists for same doctor/date/time
             val existing = db.collection("appointments")
@@ -22,7 +22,7 @@ class FirestoreAppointmentDao(
                 return Result.failure(Exception("This doctor already has an appointment at that time."))
             }
 
-            // If no conflict, add appointment
+            // Add appointment
             val map = hashMapOf(
                 "doctorName" to appointment.doctorName,
                 "appointmentType" to appointment.appointmentType,
@@ -32,8 +32,12 @@ class FirestoreAppointmentDao(
                 "notes" to appointment.notes,
                 "userId" to appointment.userId
             )
-            db.collection("appointments").add(map).await()
-            Result.success(Unit)
+
+            // Save and grab Firestore document ID
+            val docRef = db.collection("appointments").add(map).await()
+
+            // Return a **new copy** with Firestore id
+            Result.success(appointment.copy(id = docRef.id))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -74,8 +78,10 @@ class FirestoreAppointmentDao(
 
 private fun DocumentSnapshot.toAppointment(): Appointment? {
     return try {
-        this.toObject(Appointment::class.java)
+        val appointment = this.toObject(Appointment::class.java)
+        appointment?.copy(id = this.id) // override with Firestore doc id
     } catch (e: Exception) {
         null
     }
 }
+
