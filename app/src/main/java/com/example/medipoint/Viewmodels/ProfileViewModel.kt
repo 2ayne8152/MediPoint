@@ -2,6 +2,7 @@ package com.example.medipoint.Viewmodels
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.medipoint.Data.MedicalInfoEntity
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.ktx.firestore
@@ -16,9 +17,14 @@ data class UserProfile(
     val displayName: String? = null,
     val email: String? = null,
     val phoneNumber: String? = null,
+    // Add medical information fields
+    val bloodType: String? = null,
+    val insurance: String? = null,
+    val allergies: String? = null,
+    val emergencyContactName: String? = null,
+    val emergencyContactPhone: String? = null
     // Add other fields like birthDate, address, etc.
 )
-
 class ProfileViewModel : ViewModel() {
     private val auth = FirebaseAuth.getInstance()
     private val db = Firebase.firestore
@@ -50,11 +56,15 @@ class ProfileViewModel : ViewModel() {
                         val newProfile = UserProfile(
                             uid = firebaseUser.uid,
                             displayName = firebaseUser.displayName,
-                            email = firebaseUser.email
-                            // Initialize other fields as needed, e.g., phoneNumber = null
+                            email = firebaseUser.email,
+                            bloodType = null,
+                            insurance = null,
+                            allergies = null,
+                            emergencyContactName = null,
+                            emergencyContactPhone = null
                         )
-                        userDocRef.set(newProfile).await() // SAVE TO FIRESTORE
-                        _userProfile.value = newProfile     // Update local state
+                        userDocRef.set(newProfile).await()
+                        _userProfile.value = newProfile
                     }
                 } catch (e: Exception) {
                     _saveStatus.value = "Error loading profile: ${e.message}"
@@ -128,6 +138,53 @@ class ProfileViewModel : ViewModel() {
                 _saveStatus.value = "Phone number updated successfully!"
             } catch (e: Exception) {
                 _saveStatus.value = "Failed to update phone number: ${e.message}"
+            }
+        }
+    }
+    fun updateMedicalInfo(newMedicalInfo: MedicalInfoEntity) {
+        val currentUser = auth.currentUser
+        val currentProfile = _userProfile.value
+
+        if (currentUser == null) {
+            _saveStatus.value = "User not available for update."
+            return
+        }
+
+        viewModelScope.launch {
+            try {
+                val userDocRef = db.collection("users").document(currentUser.uid)
+                val medicalData = mapOf(
+                    "uid" to currentUser.uid,
+                    "bloodType" to newMedicalInfo.bloodType,
+                    "insuranceProvider" to newMedicalInfo.insuranceProvider,
+                    "allergies" to newMedicalInfo.allergies,
+                    "emergencyContactName" to newMedicalInfo.emergencyContactName,
+                    "emergencyContactPhone" to newMedicalInfo.emergencyContactPhone,
+                    // Preserve existing data
+                    "email" to (currentProfile?.email ?: currentUser.email),
+                    "displayName" to (currentProfile?.displayName ?: currentUser.displayName),
+                    "phoneNumber" to (currentProfile?.phoneNumber ?: "")
+                )
+
+                userDocRef.set(medicalData, com.google.firebase.firestore.SetOptions.merge())
+                    .await()
+
+                // Update local state
+                _userProfile.value = (_userProfile.value ?: UserProfile(
+                    uid = currentUser.uid,
+                    email = currentUser.email,
+                    displayName = currentUser.displayName
+                )).copy(
+                    bloodType = newMedicalInfo.bloodType,
+                    insurance = newMedicalInfo.insuranceProvider,
+                    allergies = newMedicalInfo.allergies,
+                    emergencyContactName = newMedicalInfo.emergencyContactName,
+                    emergencyContactPhone = newMedicalInfo.emergencyContactPhone
+                )
+
+                _saveStatus.value = "Medical information updated successfully!"
+            } catch (e: Exception) {
+                _saveStatus.value = "Failed to update medical information: ${e.message}"
             }
         }
     }
