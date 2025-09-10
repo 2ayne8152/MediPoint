@@ -127,23 +127,25 @@ fun ProfileScreen(
 
             // Edit Medical Info Dialog
             if (showEditMedicalInfoDialog) {
-                EditMedicalInfoDialog(
-                    currentMedicalInfo = MedicalInfoEntity(
-                        userId = profile.uid,
-                        bloodType = profile.bloodType,
-                        insuranceProvider = profile.insurance,
-                        allergies = profile.allergies,
-                        emergencyContactName = profile.emergencyContactName,
-                        emergencyContactPhone = profile.emergencyContactPhone
-                    ),
-                    onDismissRequest = { showEditMedicalInfoDialog = false },
-                    onApplyChanges = { newMedicalInfo ->
-                        coroutineScope.launch {
-                            profileViewModel.updateMedicalInfo(newMedicalInfo)
+                userProfile?.let { profile -> // Ensure profile is not null before showing dialog
+                    EditMedicalInfoDialog(
+                        currentMedicalInfo = MedicalInfoEntity(
+                            userId = profile.uid,
+                            bloodType = profile.bloodType,
+                            insuranceProvider = profile.insurance,
+                            allergies = profile.allergies,
+                            emergencyContactName = profile.emergencyContactName,
+                            emergencyContactPhone = profile.emergencyContactPhone
+                        ),
+                        onDismissRequest = { showEditMedicalInfoDialog = false },
+                        onApplyChanges = { newMedicalInfo ->
+                            coroutineScope.launch {
+                                profileViewModel.updateMedicalInfo(newMedicalInfo)
+                            }
+                            showEditMedicalInfoDialog = false
                         }
-                        showEditMedicalInfoDialog = false
-                    }
-                )
+                    )
+                }
             }
 
         } ?: Text("Loading user profile...", modifier = Modifier.padding(16.dp))
@@ -170,6 +172,7 @@ fun ProfileScreen(
         OptionsSection(
             onSignOut = onSignOut,
             onEditProfileClicked = { showEditProfileDialog = true },
+            onEditMedicalInfoClicked = { showEditMedicalInfoDialog = true },
             onNavigateToMedicalRecords =  onNavigateToMedicalRecords
         )
     }
@@ -638,6 +641,7 @@ fun EditMedicalInfoDialog(
 fun OptionsSection(
     onSignOut: () -> Unit,
     onEditProfileClicked: () -> Unit,
+    onEditMedicalInfoClicked: () -> Unit,
     onNavigateToMedicalRecords: () -> Unit // Add this
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -653,21 +657,16 @@ fun OptionsSection(
             onClick = onEditProfileClicked
         )
         ProfileButtons(
-                text = "Medical Records",
-        vector = Icons.Filled.DateRange, // Or another appropriate icon e.g. MedicalServices
-        shape = RoundedCornerShape(0.dp),
-        onClick = onNavigateToMedicalRecords // Navigate on click
-        )
-        ProfileButtons(
             text = "Edit Medical Info",
             vector = Icons.Filled.Edit,
             shape = RoundedCornerShape(0.dp),
-            onClick = onNavigateToMedicalRecords
+            onClick = onEditMedicalInfoClicked
         )
         ProfileButtons(
             text = "Medical Records",
-            vector = Icons.Filled.DateRange,
-            shape = RoundedCornerShape(0.dp)
+            vector = Icons.Filled.DateRange, // Or another appropriate icon e.g. MedicalServices
+            shape = RoundedCornerShape(0.dp),
+            onClick = onNavigateToMedicalRecords // Navigate on click
         )
         ProfileButtons(
             text = "Settings",
