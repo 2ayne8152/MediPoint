@@ -66,6 +66,9 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
                             appointmentId = appointmentId
                         )
                         saveCheckInRecord(appointmentId, record)
+
+                        updateAppointmentStatus(appointmentId, "Checked-In")
+
                         _checkInRecord.value = record
                     } else {
                         _checkInRecord.value = CheckInRecord(checkedIn = false)
@@ -77,6 +80,33 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
                 e.printStackTrace()
                 _checkInRecord.value = CheckInRecord(checkedIn = false)
             }
+        }
+    }
+
+    fun updateAppointmentStatus(appointmentId: String, newStatus: String) {
+        viewModelScope.launch {
+            try {
+                db.collection("appointments")
+                    .document(appointmentId)
+                    .update("status", newStatus)
+                    .addOnSuccessListener {
+                        android.util.Log.d("Firestore", "Appointment status updated to $newStatus")
+                    }
+                    .addOnFailureListener { e ->
+                        android.util.Log.e("Firestore", "Error updating status", e)
+                    }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun autoUpdateAppointmentStatus(appointmentId: String, appointmentTime: Long, durationMinutes: Int = 30) {
+        val now = System.currentTimeMillis()
+        val appointmentEnd = appointmentTime + (durationMinutes * 60 * 1000)
+
+        if (now > appointmentEnd) {
+            updateAppointmentStatus(appointmentId, "Completed")
         }
     }
 
@@ -132,12 +162,28 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
                     val appt = snapshot.toObject(Appointment::class.java)
                     _appointment.value = appt
 
-                    // ⚡️ Parse date + time into timestamp
-                    if (appt?.date != null && appt.time != null) {
+                    // ⚡ Parse date + time into timestamp
+                    if (appt?.date != null) {
                         val sdf = SimpleDateFormat("d/M/yyyy hh:mm a", Locale.getDefault())
                         try {
                             val parsed = sdf.parse("${appt.date} ${appt.time}")
-                            _appointmentDateTime.value = parsed?.time
+                            val apptTime = parsed?.time
+                            _appointmentDateTime.value = apptTime
+
+                            if (apptTime != null && appt.status == "Scheduled") {
+                                val now = System.currentTimeMillis()
+                                if (now > apptTime) {
+                                    db.collection("appointments")
+                                        .document(appointmentId)
+                                        .update("status", "Missed")
+                                        .addOnSuccessListener {
+                                            android.util.Log.d("Firestore", "Status updated to Missed")
+                                        }
+                                        .addOnFailureListener { e ->
+                                            android.util.Log.e("Firestore", "Error updating status", e)
+                                        }
+                                }
+                            }
                         } catch (e: Exception) {
                             e.printStackTrace()
                             _appointmentDateTime.value = null
@@ -156,6 +202,7 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
             }
         }
     }
+
 
     fun setCheckInRecord(record: CheckInRecord?) {
         _checkInRecord.value = record
