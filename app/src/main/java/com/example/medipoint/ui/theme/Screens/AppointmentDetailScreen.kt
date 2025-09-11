@@ -20,8 +20,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -51,8 +51,6 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -61,10 +59,14 @@ fun AppointmentDetailScreen(
     viewModel: CheckInViewModel = viewModel()
 ) {
     val checkInRecord by viewModel.checkInRecord.collectAsState()
+    val appointment by viewModel.appointment.collectAsState()
+    val appointmentDateTime by viewModel.appointmentDateTime.collectAsState()
+
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
 
     LaunchedEffect(appointmentId) {
         viewModel.loadUserCheckInRecord(appointmentId)
+        viewModel.loadAppointmentDetails(appointmentId)
     }
 
     Column(
@@ -74,7 +76,7 @@ fun AppointmentDetailScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Appointment Card
+        // ✅ Appointment Card (Dynamic from Firestore)
         Card(
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier
@@ -88,25 +90,31 @@ fun AppointmentDetailScreen(
                     .padding(16.dp)
                     .fillMaxWidth()
             ) {
-                Text("Dr. Johnson", style = MaterialTheme.typography.titleLarge)
                 Text(
-                    "General Checkup",
+                    appointment?.doctorName ?: "Loading...",
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Text(
+                    appointment?.appointmentType ?: "",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.Gray
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                AppointmentInfoRow(Icons.Default.DateRange, "Monday, July 28, 2025")
-                AppointmentInfoRow(Icons.Filled.Settings, "09:00 AM")
-                AppointmentInfoRow(Icons.Default.Call, "+1 (555) 123-4567")
+                AppointmentInfoRow(Icons.Default.DateRange, "Date:", appointment?.date ?: "")
+                AppointmentInfoRow(Icons.Filled.Settings, "Time:", appointment?.time ?: "")
+                AppointmentInfoRow(Icons.Filled.Phone, "Contact Us: ", "012-345678")
                 Spacer(modifier = Modifier.height(8.dp))
                 Box(
                     modifier = Modifier
                         .align(Alignment.End)
-                        .background(Color(0xFF00C853), shape = RoundedCornerShape(12.dp))
+                        .background(
+                            if (appointment?.status == "Confirmed") Color(0xFF00C853) else Color.Gray,
+                            shape = RoundedCornerShape(12.dp)
+                        )
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        "Confirmed",
+                        appointment?.status ?: "",
                         color = Color.White,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -114,14 +122,15 @@ fun AppointmentDetailScreen(
             }
         }
 
-        // ✅ Check-in Card
+        // ✅ Check-in Card (Dynamic window)
         CheckInCard(
             checkInRecord = checkInRecord ?: CheckInRecord(),
             appointmentId = appointmentId,
-            viewModel = viewModel
+            viewModel = viewModel,
+            appointmentDateTime = appointmentDateTime
         )
 
-        // Location & Directions Card
+        // Location & Directions Card (unchanged)
         Card(
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier
@@ -172,7 +181,7 @@ fun AppointmentDetailScreen(
             }
         }
 
-        // Preparation Tips
+        // Preparation Tips (unchanged)
         Card(
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier
@@ -201,14 +210,14 @@ fun AppointmentDetailScreen(
 }
 
 @Composable
-fun AppointmentInfoRow(icon: ImageVector, text: String) {
+fun AppointmentInfoRow(icon: ImageVector, text1: String, text2: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(vertical = 4.dp)
     ) {
         Icon(icon, contentDescription = null, tint = Color(0xFF0A0A1A))
         Spacer(modifier = Modifier.width(8.dp))
-        Text(text, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+        Text( text = "$text1 $text2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -218,19 +227,15 @@ fun CheckInCard(
     checkInRecord: CheckInRecord,
     appointmentId: String,
     viewModel: CheckInViewModel = viewModel(),
+    appointmentDateTime: Long?,
     locationPermission: PermissionState = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
 ) {
     val context = LocalContext.current
-
-    // 🔹 Simulated appointment datetime (replace with real one from your DB)
-    val appointmentDateTime = SimpleDateFormat("d/M/yyyy hh:mm a", Locale.getDefault())
-        .parse("28/7/2025 09:00 AM")?.time ?: 0L
-
     val now = System.currentTimeMillis()
 
-    // Allow check-in 30 min before until 10 min after appointment
-    val checkInAvailable =
-        now in (appointmentDateTime - 30 * 60 * 1000)..(appointmentDateTime + 10 * 60 * 1000)
+    val checkInAvailable = appointmentDateTime?.let {
+        now in (it - 30 * 60 * 1000)..(it + 10 * 60 * 1000)
+    } ?: false
 
     Card(
         shape = RoundedCornerShape(16.dp),
@@ -245,7 +250,7 @@ fun CheckInCard(
             Text(
                 text = stringResource(R.string.check_in),
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.align(alignment = Alignment.Start)
+                modifier = Modifier.align(Alignment.Start)
             )
             Spacer(modifier = Modifier.height(12.dp))
 

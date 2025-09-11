@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.medipoint.Data.Appointment
 import com.example.medipoint.Data.CheckInRecord
 import com.google.android.gms.location.LocationServices
 import com.google.firebase.auth.FirebaseAuth
@@ -12,6 +13,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class CheckInViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -26,6 +29,14 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
 
     private val _checkInRecord = MutableStateFlow<CheckInRecord?>(null)
     val checkInRecord: StateFlow<CheckInRecord?> = _checkInRecord
+
+    // ⚡️ Appointment object from Firestore
+    private val _appointment = MutableStateFlow<Appointment?>(null)
+    val appointment: StateFlow<Appointment?> = _appointment
+
+    // ⚡️ Parsed appointment datetime in millis
+    private val _appointmentDateTime = MutableStateFlow<Long?>(null)
+    val appointmentDateTime: StateFlow<Long?> = _appointmentDateTime
 
     /**
      * Try to check in for a specific appointment (only once per user).
@@ -51,8 +62,8 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
                             checkInTime = System.currentTimeMillis(),
                             checkInLat = location.latitude,
                             checkInLng = location.longitude,
-                            userId = currentUser.uid,         // ✅ store userId
-                            appointmentId = appointmentId     // ✅ store appointmentId
+                            userId = currentUser.uid,
+                            appointmentId = appointmentId
                         )
                         saveCheckInRecord(appointmentId, record)
                         _checkInRecord.value = record
@@ -69,15 +80,11 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    /**
-     * Save record under the appointment’s subcollection.
-     * One record per user per appointment.
-     */
     private fun saveCheckInRecord(appointmentId: String, record: CheckInRecord) {
         val checkInRef = db.collection("appointments")
             .document(appointmentId)
             .collection("checkin")
-            .document(record.userId) // ✅ use userId as the doc ID so it's unique per user
+            .document(record.userId)
 
         checkInRef.set(record)
             .addOnSuccessListener {
@@ -88,9 +95,6 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
             }
     }
 
-    /**
-     * Load the current user’s check-in for an appointment.
-     */
     fun loadUserCheckInRecord(appointmentId: String) {
         val currentUser = auth.currentUser ?: return
 
@@ -114,8 +118,45 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /**
-     * Allows UI to set the record manually (optional).
+     * Load appointment details from Firestore and parse datetime.
      */
+    fun loadAppointmentDetails(appointmentId: String) {
+        viewModelScope.launch {
+            try {
+                val snapshot = db.collection("appointments")
+                    .document(appointmentId)
+                    .get()
+                    .await()
+
+                if (snapshot.exists()) {
+                    val appt = snapshot.toObject(Appointment::class.java)
+                    _appointment.value = appt
+
+                    // ⚡️ Parse date + time into timestamp
+                    if (appt?.date != null && appt.time != null) {
+                        val sdf = SimpleDateFormat("d/M/yyyy hh:mm a", Locale.getDefault())
+                        try {
+                            val parsed = sdf.parse("${appt.date} ${appt.time}")
+                            _appointmentDateTime.value = parsed?.time
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            _appointmentDateTime.value = null
+                        }
+                    } else {
+                        _appointmentDateTime.value = null
+                    }
+                } else {
+                    _appointment.value = null
+                    _appointmentDateTime.value = null
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _appointment.value = null
+                _appointmentDateTime.value = null
+            }
+        }
+    }
+
     fun setCheckInRecord(record: CheckInRecord?) {
         _checkInRecord.value = record
     }
