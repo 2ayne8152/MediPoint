@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -131,13 +132,10 @@ fun HomeScreen(
             Spacer(
                 modifier = Modifier.padding(6.dp)
             )
-            Text(
-                text = "View All",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Blue,
-                modifier = Modifier.clickable {
-                    onViewAllClick()
-                }
+            Icon(
+                imageVector = Icons.Filled.DateRange,
+                contentDescription = null,
+                tint = Color(0xFF0A0A1A)
             )
         }
 
@@ -155,7 +153,7 @@ fun HomeScreen(
                     AppointmentCard(
                         doctor = appt.doctorName,
                         specialty = appt.appointmentType,
-                        date = appt.date,
+                              date = appt.date,
                         time = appt.time,
                         modifier = Modifier.padding(top = 8.dp),
                         onDetailClick = { onDetailClick(appt.id) }

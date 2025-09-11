@@ -2,6 +2,7 @@ package com.example.medipoint.Data
 
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.tasks.await
 
 class FirestoreAppointmentDao(
@@ -61,8 +62,8 @@ class FirestoreAppointmentDao(
         userId: String,
         onDataChange: (List<Appointment>) -> Unit,
         onError: (Exception) -> Unit
-    ) {
-        db.collection("appointments")
+    ): ListenerRegistration {
+       return db.collection("appointments")
             .whereEqualTo("userId", userId)
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {

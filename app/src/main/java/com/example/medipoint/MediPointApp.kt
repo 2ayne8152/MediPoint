@@ -39,13 +39,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.example.medipoint.ui.theme.Screens.AllAppointmentsScreen
 import com.example.medipoint.ui.theme.Screens.AppointmentDetailScreen
 import com.example.medipoint.ui.theme.Screens.BookingScreen
 import com.example.medipoint.ui.theme.Screens.HomeScreen
 import com.example.medipoint.ui.theme.Screens.LoginScreen
+import com.example.medipoint.ui.theme.Screens.MedicalRecordScreen
 import com.example.medipoint.ui.theme.Screens.ProfileScreen
 import com.example.medipoint.ui.theme.Screens.RegistrationScreen
+import com.example.medipoint.ui.theme.Screens.AllAppointmentsScreen
 import com.example.medipoint.ui.theme.Viewmodels.AuthViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
@@ -57,6 +58,7 @@ enum class MedipointScreens(val route: String) {
     ProfileScreen("profile"),
     LoginScreen("login"),
     RegistrationScreen("registration"),
+    MedicalRecordsScreen("medicalRecords"),
     AllAppointmentsScreen("allAppointments");
 
     companion object {
@@ -170,7 +172,14 @@ fun MainAppContent(onSignOut: () -> Unit) {
                 AppointmentDetailScreen(appointmentId = appointmentId)
             }
             composable(route = MedipointScreens.ProfileScreen.route) {
-                ProfileScreen(onSignOut = onSignOut)
+                ProfileScreen(onSignOut = onSignOut,
+                    onNavigateToMedicalRecords = { // New navigation callback
+                        navController.navigate(MedipointScreens.MedicalRecordsScreen.route)
+                    })
+            }
+            composable(route = MedipointScreens.MedicalRecordsScreen.route) {
+                // You'll create MedicalRecordScreen and its ViewModel
+                MedicalRecordScreen(viewModel()) // Example: val medicalRecordsViewModel: MedicalRecordsViewModel = viewModel()
             }
             composable(route = MedipointScreens.AllAppointmentsScreen.route) {
                 AllAppointmentsScreen(
