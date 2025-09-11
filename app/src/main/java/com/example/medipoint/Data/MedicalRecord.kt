@@ -13,7 +13,6 @@ data class MedicalRecord(
 
     // === Core Record Metadata ===
     val recordTitle: String = "",      // e.g., "Annual Check-up Summary", "Lab Results - Blood Panel"
-    val dateOfService: Date? = null,   // When the medical service/event occurred. Use Date or Timestamp.
     // Consider storing as Firestore Timestamp for better querying.
     val recordType: String = "",       // User-defined or predefined: "Doctor's Note", "Lab Report",
     // "Imaging Result", "Prescription", "Vaccination Record", "Discharge Summary"
