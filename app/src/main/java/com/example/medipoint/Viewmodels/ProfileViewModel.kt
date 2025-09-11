@@ -1,14 +1,23 @@
 package com.example.medipoint.Viewmodels
 
+import android.app.Application
+import androidx.compose.animation.core.copy
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.medipoint.Data.MediPointDatabase
 import com.example.medipoint.Data.MedicalInfoEntity
+import com.example.medipoint.Repository.MedicalInfoRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
@@ -25,171 +34,156 @@ data class UserProfile(
     val emergencyContactPhone: String? = null
     // Add other fields like birthDate, address, etc.
 )
-class ProfileViewModel : ViewModel() {
+class ProfileViewModel(application: Application) : AndroidViewModel(application) {
+
     private val auth = FirebaseAuth.getInstance()
-    private val db = Firebase.firestore
+    private val firestoreDb = FirebaseFirestore.getInstance()
+    private val medicalInfoDao = MediPointDatabase.getDatabase(application).medicalInfoDao()
+    private val medicalInfoRepository = MedicalInfoRepository(medicalInfoDao, firestoreDb)
 
-    private val _userProfile = MutableStateFlow<UserProfile?>(null)
-    val userProfile: StateFlow<UserProfile?> = _userProfile
+    // For basic user profile from Firestore (name, email, phone)
+    private val _userProfileFirestore = MutableStateFlow<UserProfile?>(null) // Holds data from Firestore user doc
+    // val userProfileFirestore: StateFlow<UserProfile?> = _userProfileFirestore.asStateFlow()
 
-    private val _saveStatus = MutableStateFlow<String?>(null) // For messages like "Saved" or "Error"
-    val saveStatus: StateFlow<String?> = _saveStatus
+    // For medical info from Room (which is synced with Firestore)
+    private val _medicalInfo = MutableStateFlow<MedicalInfoEntity?>(null)
+    // val medicalInfo: StateFlow<MedicalInfoEntity?> = _medicalInfo.asStateFlow()
+
+    // Combined StateFlow for the UI
+    private val _uiUserProfile = MutableStateFlow<UserProfile?>(null)
+    val userProfile: StateFlow<UserProfile?> = _uiUserProfile.asStateFlow()
+
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    private val _saveStatus = MutableStateFlow<String?>(null) // For messages like "Saved", "Error"
+    val saveStatus: StateFlow<String?> = _saveStatus.asStateFlow()
+
+    private var userId: String? = null
 
     init {
-        loadUserProfile()
-    }
+        auth.currentUser?.uid?.let { currentUserId ->
+            userId = currentUserId
+            loadUserProfileData(currentUserId) // Load basic profile and medical info
+        }
 
-    private fun loadUserProfile() {
-        auth.currentUser?.let { firebaseUser ->
-            viewModelScope.launch {
-                try {
-                    val userDocRef = db.collection("users").document(firebaseUser.uid)
-                    val snapshot = userDocRef.get().await()
-                    if (snapshot.exists()) {
-                        val fetchedProfile = snapshot.toObject(UserProfile::class.java)?.copy(
-                            displayName = firebaseUser.displayName,
-                            email = firebaseUser.email
-                        )
-                        _userProfile.value = fetchedProfile
-                    } else {
-                        // User document doesn't exist yet in Firestore, create it.
-                        val newProfile = UserProfile(
-                            uid = firebaseUser.uid,
-                            displayName = firebaseUser.displayName,
-                            email = firebaseUser.email,
-                            bloodType = null,
-                            insurance = null,
-                            allergies = null,
-                            emergencyContactName = null,
-                            emergencyContactPhone = null
-                        )
-                        userDocRef.set(newProfile).await()
-                        _userProfile.value = newProfile
-                    }
-                } catch (e: Exception) {
-                    _saveStatus.value = "Error loading profile: ${e.message}"
-                }
+        // Combine flows for UI
+        viewModelScope.launch {
+            combine(_userProfileFirestore, _medicalInfo) { profileFromFirestore, medicalFromRoom ->
+                profileFromFirestore?.copy(
+                    // Update UserProfile with fields from MedicalInfoEntity
+                    bloodType = medicalFromRoom?.bloodType,
+                    insurance = medicalFromRoom?.insuranceProvider,
+                    allergies = medicalFromRoom?.allergies,
+                    emergencyContactName = medicalFromRoom?.emergencyContactName,
+                    emergencyContactPhone = medicalFromRoom?.emergencyContactPhone
+                )
+            }.collectLatest { combinedProfile ->
+                _uiUserProfile.value = combinedProfile
             }
+        }
+    }
+    private fun loadUserProfileData(currentUserId: String) {
+        _isLoading.value = true
+        viewModelScope.launch {
+            // 1. Fetch basic user profile (name, email, phone) from Firestore users/{userId}
+            try {
+                val userDocument = firestoreDb.collection("users").document(currentUserId).get().await()
+                if (userDocument.exists()) {
+                    _userProfileFirestore.value = UserProfile(
+                        uid = currentUserId,
+                        displayName = userDocument.getString("displayName") ?: auth.currentUser?.displayName,
+                        email = userDocument.getString("email") ?: auth.currentUser?.email,
+                        phoneNumber = userDocument.getString("phoneNumber")
+                        // Medical info fields will be populated by the other flow
+                    )
+                } else {
+                    // Basic profile from Auth if Firestore doc doesn't exist
+                    _userProfileFirestore.value = UserProfile(
+                        uid = currentUserId,
+                        displayName = auth.currentUser?.displayName,
+                        email = auth.currentUser?.email
+                    )
+                }
+            } catch (e: Exception) {
+                // Handle error fetching basic profile
+                _saveStatus.value = "Error loading profile: ${e.message}"
+            }
+
+            // 2. Observe Medical Info from Room
+            medicalInfoRepository.getLocalMedicalInfo(currentUserId).collectLatest { medicalInfoFromRoom ->
+                _medicalInfo.value = medicalInfoFromRoom
+            }
+        }
+
+        // 3. Refresh medical info from Firestore in the background and update Room
+        viewModelScope.launch {
+            medicalInfoRepository.refreshMedicalInfoFromFirestore(currentUserId)
+            // No direct UI update here, the Room Flow will emit changes
+            _isLoading.value = false // Set loading to false after refresh attempt
         }
     }
 
     fun updateDisplayName(newName: String) {
-        val currentUser = auth.currentUser ?: return
-        val currentProfile = _userProfile.value // Don't return if currentProfile is null yet, we might be creating it
-
-        if (currentUser == null) {
-            _saveStatus.value = "User not available for update."
-            return
-        }
-
+        val currentUid = userId ?: return
         viewModelScope.launch {
             try {
-                // Update in Firebase Auth
-                val authProfileUpdates = com.google.firebase.auth.UserProfileChangeRequest.Builder()
-                    .setDisplayName(newName)
-                    .build()
-                currentUser.updateProfile(authProfileUpdates).await()
-
-                // Update/Create in Firestore
-                val userDocRef = db.collection("users").document(currentUser.uid)
-                // Create a map of the data you want to set/merge
-                val userData = mapOf(
-                    "uid" to currentUser.uid, // Good to have uid in the document
-                    "displayName" to newName,
-                    // If currentProfile is null, it means we are likely creating the document
-                    // You might want to include email from auth here as well
-                    "email" to (currentProfile?.email ?: currentUser.email)
-                    // Add other fields you want to ensure are present
-                )
-                userDocRef.set(userData, com.google.firebase.firestore.SetOptions.merge())
-                    .await()
-
-                // Update local state
-                _userProfile.value = (_userProfile.value ?: UserProfile(uid = currentUser.uid, email = currentUser.email)).copy(displayName = newName)
-                _saveStatus.value = "Display name updated successfully!"
+                firestoreDb.collection("users").document(currentUid)
+                    .update("displayName", newName).await()
+                // Update local state if needed, or rely on listener if you have one for userProfileFirestore
+                _userProfileFirestore.value = _userProfileFirestore.value?.copy(displayName = newName)
+                _saveStatus.value = "Display name updated."
             } catch (e: Exception) {
-                _saveStatus.value = "Failed to update display name: ${e.message}"
+                _saveStatus.value = "Error updating display name: ${e.message}"
             }
         }
     }
 
     fun updatePhoneNumber(newPhoneNumber: String) {
-        val currentUser = auth.currentUser
-        val currentProfile = _userProfile.value
-
-        if (currentUser == null) {
-            _saveStatus.value = "User not available for update."
-            return
-        }
-
+        val currentUid = userId ?: return
         viewModelScope.launch {
             try {
-                val userDocRef = db.collection("users").document(currentUser.uid)
-                val phoneData = mapOf(
-                    "uid" to currentUser.uid, // Good practice
-                    "phoneNumber" to newPhoneNumber,
-                    "email" to (currentProfile?.email ?: currentUser.email), // Include other key fields
-                    "displayName" to (currentProfile?.displayName ?: currentUser.displayName)
-                )
-                userDocRef.set(phoneData, com.google.firebase.firestore.SetOptions.merge())
-                    .await()
-
-                _userProfile.value = (_userProfile.value ?: UserProfile(uid = currentUser.uid, email = currentUser.email, displayName = currentUser.displayName)).copy(phoneNumber = newPhoneNumber)
-                _saveStatus.value = "Phone number updated successfully!"
+                firestoreDb.collection("users").document(currentUid)
+                    .update("phoneNumber", newPhoneNumber).await()
+                _userProfileFirestore.value = _userProfileFirestore.value?.copy(phoneNumber = newPhoneNumber)
+                _saveStatus.value = "Phone number updated."
             } catch (e: Exception) {
-                _saveStatus.value = "Failed to update phone number: ${e.message}"
+                _saveStatus.value = "Error updating phone number: ${e.message}"
             }
         }
     }
-    fun updateMedicalInfo(newMedicalInfo: MedicalInfoEntity) {
-        val currentUser = auth.currentUser
-        val currentProfile = _userProfile.value
 
-        if (currentUser == null) {
-            _saveStatus.value = "User not available for update."
-            return
-        }
+    fun updateMedicalInfo(updatedMedicalInfo: MedicalInfoEntity) {
+        val currentUid = userId ?: return
+        // Ensure the medicalInfo object has the correct userId
+        val infoToSave = updatedMedicalInfo.copy(userId = currentUid)
 
         viewModelScope.launch {
-            try {
-                val userDocRef = db.collection("users").document(currentUser.uid)
-                val medicalData = mapOf(
-                    "uid" to currentUser.uid,
-                    "bloodType" to newMedicalInfo.bloodType,
-                    "insuranceProvider" to newMedicalInfo.insuranceProvider,
-                    "allergies" to newMedicalInfo.allergies,
-                    "emergencyContactName" to newMedicalInfo.emergencyContactName,
-                    "emergencyContactPhone" to newMedicalInfo.emergencyContactPhone,
-                    // Preserve existing data
-                    "email" to (currentProfile?.email ?: currentUser.email),
-                    "displayName" to (currentProfile?.displayName ?: currentUser.displayName),
-                    "phoneNumber" to (currentProfile?.phoneNumber ?: "")
-                )
-
-                userDocRef.set(medicalData, com.google.firebase.firestore.SetOptions.merge())
-                    .await()
-
-                // Update local state
-                _userProfile.value = (_userProfile.value ?: UserProfile(
-                    uid = currentUser.uid,
-                    email = currentUser.email,
-                    displayName = currentUser.displayName
-                )).copy(
-                    bloodType = newMedicalInfo.bloodType,
-                    insurance = newMedicalInfo.insuranceProvider,
-                    allergies = newMedicalInfo.allergies,
-                    emergencyContactName = newMedicalInfo.emergencyContactName,
-                    emergencyContactPhone = newMedicalInfo.emergencyContactPhone
-                )
-
-                _saveStatus.value = "Medical information updated successfully!"
-            } catch (e: Exception) {
-                _saveStatus.value = "Failed to update medical information: ${e.message}"
+            _isLoading.value = true
+            val result = medicalInfoRepository.saveMedicalInfo(infoToSave)
+            if (result.isSuccess) {
+                _saveStatus.value = "Medical information updated."
+                // The Room Flow will automatically update _medicalInfo.value
+            } else {
+                _saveStatus.value = "Error updating medical info: ${result.exceptionOrNull()?.message}"
             }
+            _isLoading.value = false
         }
     }
 
     fun clearSaveStatus() {
         _saveStatus.value = null
+    }
+
+    // Call this on sign out
+    fun onSignOutClearData() {
+        viewModelScope.launch {
+            userId?.let { medicalInfoRepository.clearLocalMedicalInfo(it) }
+            _userProfileFirestore.value = null
+            _medicalInfo.value = null
+            _uiUserProfile.value = null
+            userId = null
+        }
     }
 }

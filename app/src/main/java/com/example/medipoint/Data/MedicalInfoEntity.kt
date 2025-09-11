@@ -1,11 +1,16 @@
 package com.example.medipoint.Data
 
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
+@Entity(tableName = "medical_info")
 data class MedicalInfoEntity(
-    val userId: String, // Links to the current user
+    @PrimaryKey
+    val userId: String,
     val bloodType: String? = null,
     val insuranceProvider: String? = null,
-    val allergies: String? = null, // e.g., "Peanut, Penicillin"
+    val allergies: String? = null,
     val emergencyContactName: String? = null,
     val emergencyContactPhone: String? = null
 )
