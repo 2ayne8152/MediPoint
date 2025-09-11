@@ -71,6 +71,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 
+
     // Google location services
     implementation("com.google.android.gms:play-services-location:21.3.0")
 

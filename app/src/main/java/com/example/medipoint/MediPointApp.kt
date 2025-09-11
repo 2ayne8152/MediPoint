@@ -46,6 +46,7 @@ import com.example.medipoint.ui.theme.Screens.LoginScreen
 import com.example.medipoint.ui.theme.Screens.MedicalRecordScreen
 import com.example.medipoint.ui.theme.Screens.ProfileScreen
 import com.example.medipoint.ui.theme.Screens.RegistrationScreen
+import com.example.medipoint.ui.theme.Screens.AllAppointmentsScreen
 import com.example.medipoint.ui.theme.Viewmodels.AuthViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
@@ -57,7 +58,8 @@ enum class MedipointScreens(val route: String) {
     ProfileScreen("profile"),
     LoginScreen("login"),
     RegistrationScreen("registration"),
-    MedicalRecordsScreen("medicalRecords");
+    MedicalRecordsScreen("medicalRecords"),
+    AllAppointmentsScreen("allAppointments");
 
     companion object {
         fun appointmentDetail(appointmentId: String): String {
@@ -153,6 +155,9 @@ fun MainAppContent(onSignOut: () -> Unit) {
                     },
                     onDetailClick = { appointmentId ->
                         navController.navigate(MedipointScreens.appointmentDetail(appointmentId))
+                    },
+                    onViewAllClick = {
+                        navController.navigate(MedipointScreens.AllAppointmentsScreen.route)
                     }
                 )
             }
@@ -175,6 +180,13 @@ fun MainAppContent(onSignOut: () -> Unit) {
             composable(route = MedipointScreens.MedicalRecordsScreen.route) {
                 // You'll create MedicalRecordScreen and its ViewModel
                 MedicalRecordScreen(viewModel()) // Example: val medicalRecordsViewModel: MedicalRecordsViewModel = viewModel()
+            }
+            composable(route = MedipointScreens.AllAppointmentsScreen.route) {
+                AllAppointmentsScreen(
+                    onDetailClick = { appointmentId ->
+                        navController.navigate(MedipointScreens.appointmentDetail(appointmentId))
+                    }
+                )
             }
         }
     }
