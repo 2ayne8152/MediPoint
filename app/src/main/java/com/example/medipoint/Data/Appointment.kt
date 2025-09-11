@@ -34,20 +34,6 @@ data class Appointment(
     val treatmentPlan: String = "",       // Detailed treatment plan
     val followUpInstructions: String = "",// e.g., "Come back in 2 weeks", "Perform X test"
 
-//    // Attachments - These would typically be URLs pointing to files in Firebase Storage or another CDN
-//    val prescriptionAttachmentUrls: List<String> = emptyList(), // URLs to scanned/digital prescriptions
-//    val labResultAttachmentUrls: List<String> = emptyList(),    // URLs to lab result documents/images
-//    val medicalImageAttachmentUrls: List<String> = emptyList(), // URLs to X-rays, MRIs, etc.
-
-//    // Billing Info (Optional - ensure you handle privacy and security appropriately if storing sensitive financial data)
-//    val consultationFee: Double? = null,
-//    val insuranceProvider: String? = null, // Could be same as user's main insurance
-//    val insurancePolicyNumber: String? = null,
-//    val amountCoveredByInsurance: Double? = null,
-//    val outOfPocketCost: Double? = null,
-//    val paymentStatus: String? = null, // e.g., "Paid", "Pending", "Due"
-//    val paymentMethod: String? = null,
-//    val transactionId: String? = null,
 
     // Check-In Record (as previously defined)
     val checkInRecord: CheckInRecord? = null // Embeds the latest check-in for this appointment
