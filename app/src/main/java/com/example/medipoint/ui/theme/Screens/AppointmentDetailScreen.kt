@@ -51,6 +51,8 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -220,6 +222,16 @@ fun CheckInCard(
 ) {
     val context = LocalContext.current
 
+    // 🔹 Simulated appointment datetime (replace with real one from your DB)
+    val appointmentDateTime = SimpleDateFormat("d/M/yyyy hh:mm a", Locale.getDefault())
+        .parse("28/7/2025 09:00 AM")?.time ?: 0L
+
+    val now = System.currentTimeMillis()
+
+    // Allow check-in 30 min before until 10 min after appointment
+    val checkInAvailable =
+        now in (appointmentDateTime - 30 * 60 * 1000)..(appointmentDateTime + 10 * 60 * 1000)
+
     Card(
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth(),
@@ -252,6 +264,7 @@ fun CheckInCard(
                             locationPermission.launchPermissionRequest()
                         }
                     },
+                    enabled = checkInAvailable,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp),
@@ -259,6 +272,15 @@ fun CheckInCard(
                     colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
                 ) {
                     Text("Tap to Check In")
+                }
+
+                if (!checkInAvailable) {
+                    Text(
+                        text = "Check-in opens 30 minutes before your appointment",
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
                 }
             }
         }
