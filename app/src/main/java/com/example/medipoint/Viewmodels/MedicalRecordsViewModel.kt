@@ -1,39 +1,50 @@
 package com.example.medipoint.Viewmodels // Or your preferred ViewModel package
 
+import androidx.activity.result.launch
+import androidx.compose.foundation.layout.size
+import androidx.core.util.remove
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 // import androidx.lifecycle.viewModelScope // Not strictly needed for the changes here but good to have
 import com.example.medipoint.Data.Appointment
 import com.example.medipoint.Data.FirestoreAppointmentDao // Assuming still used by Repository
+import com.example.medipoint.Data.FirestoreMedicalRecordDao
+import com.example.medipoint.Data.MedicalRecord
 import com.example.medipoint.Data.MedicalRecordDetails // Import the new data class
 import com.example.medipoint.Data.PrescribedMedication
 import com.example.medipoint.Repository.AppointmentRepository
+import com.example.medipoint.Repository.MedicalRecordRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 // import kotlinx.coroutines.flow.collectLatest // Not directly used in the changed parts but fine to keep
 // import kotlinx.coroutines.launch // Not directly used in the changed parts but fine to keep
 import kotlin.random.Random
 
 class MedicalRecordsViewModel(
-    private val repository: AppointmentRepository = AppointmentRepository(FirestoreAppointmentDao())
+    // Inject both repositories
+    private val appointmentRepository: AppointmentRepository = AppointmentRepository(FirestoreAppointmentDao()),
+    private val medicalRecordRepository: MedicalRecordRepository = MedicalRecordRepository(
+        FirestoreMedicalRecordDao()
+    )
 ) : ViewModel() {
 
-    private val _medicalRecords = MutableStateFlow<List<Appointment>>(emptyList())
+    // State for fetched data
+    private val _rawAppointments = MutableStateFlow<List<Appointment>>(emptyList())
+    private val _rawMedicalRecords = MutableStateFlow<List<MedicalRecord>>(emptyList())
 
     // --- Statistics StateFlows ---
+    // These might change based on what data they are derived from now
+
+    // Statistics derived from Appointments
     private val _appointmentTypeStats = MutableStateFlow<Map<String, Int>>(emptyMap())
     val appointmentTypeStats: StateFlow<Map<String, Int>> = _appointmentTypeStats.asStateFlow()
 
     private val _statusStats = MutableStateFlow<Map<String, Int>>(emptyMap())
     val statusStats: StateFlow<Map<String, Int>> = _statusStats.asStateFlow()
-
-    private val _frequentMedications = MutableStateFlow<List<Pair<String, Int>>>(emptyList())
-    val frequentMedications: StateFlow<List<Pair<String, Int>>> = _frequentMedications.asStateFlow()
-
-    private val _uniqueMedications = MutableStateFlow<Set<String>>(emptySet())
-    val uniqueMedications: StateFlow<Set<String>> = _uniqueMedications.asStateFlow()
 
     private val _typesPerDoctorStats = MutableStateFlow<Map<String, Map<String, Int>>>(emptyMap())
     val typesPerDoctorStats: StateFlow<Map<String, Map<String, Int>>> = _typesPerDoctorStats.asStateFlow()
@@ -41,13 +52,24 @@ class MedicalRecordsViewModel(
     private val _statusPerTypeStats = MutableStateFlow<Map<String, Map<String, Int>>>(emptyMap())
     val statusPerTypeStats: StateFlow<Map<String, Map<String, Int>>> = _statusPerTypeStats.asStateFlow()
 
+    // Statistics derived from MedicalRecords (new)
+    private val _frequentMedications = MutableStateFlow<List<Pair<String, Int>>>(emptyList())
+    val frequentMedications: StateFlow<List<Pair<String, Int>>> = _frequentMedications.asStateFlow()
+
+    private val _uniqueMedicationsCount = MutableStateFlow(0) // Simplified from Set to just count
+    val uniqueMedicationsCount: StateFlow<Int> = _uniqueMedicationsCount.asStateFlow()
+
+    private val _recordTypeStats = MutableStateFlow<Map<String, Int>>(emptyMap()) // New stat
+    val recordTypeStats: StateFlow<Map<String, Int>> = _recordTypeStats.asStateFlow()
+
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-    private var appointmentsListenerRegistration: ListenerRegistration? = null
+    private var appointmentsListenerReg: ListenerRegistration? = null
 
     private val mockMedicationsList = listOf(
         PrescribedMedication("Amoxicillin", "250mg", "Thrice daily"),
@@ -62,99 +84,64 @@ class MedicalRecordsViewModel(
     )
 
     init {
-        loadMedicalRecordsAndProcess()
+        loadAllDataAndProcess()
     }
 
-    private fun loadMedicalRecordsAndProcess() {
+    private fun resetStats() {
+        _appointmentTypeStats.value = emptyMap()
+        _statusStats.value = emptyMap()
+        _typesPerDoctorStats.value = emptyMap()
+        _statusPerTypeStats.value = emptyMap()
+        _frequentMedications.value = emptyList()
+        _uniqueMedicationsCount.value = 0
+        _recordTypeStats.value = emptyMap()
+    }
+
+    private fun loadAllDataAndProcess() {
         val userId = FirebaseAuth.getInstance().currentUser?.uid
         if (userId == null) {
             _errorMessage.value = "User not logged in."
-            _appointmentTypeStats.value = emptyMap()
-            _statusStats.value = emptyMap()
-            _frequentMedications.value = emptyList()
-            _uniqueMedications.value = emptySet()
-            _typesPerDoctorStats.value = emptyMap()
-            _statusPerTypeStats.value = emptyMap()
+            resetStats()
             return
         }
 
         _isLoading.value = true
         _errorMessage.value = null
-        _appointmentTypeStats.value = emptyMap()
-        _statusStats.value = emptyMap()
-        _frequentMedications.value = emptyList()
-        _uniqueMedications.value = emptySet()
-        _typesPerDoctorStats.value = emptyMap()
-        _statusPerTypeStats.value = emptyMap()
+        resetStats()
 
-        appointmentsListenerRegistration?.remove()
+        appointmentsListenerReg?.remove()
+        // medicalRecordsListenerReg?.remove()
 
-        appointmentsListenerRegistration = repository.listenAppointments(
+        appointmentsListenerReg = appointmentRepository.listenAppointments(
             userId = userId,
             onDataChange = { appointments ->
-                _medicalRecords.value = appointments
-
-                // **MODIFIED: Call the updated simulation function**
-                val appointmentsWithSimulatedDetails = simulateMedicalDetails(appointments)
-
-                calculateAppointmentTypeStats(appointmentsWithSimulatedDetails)
-                calculateStatusStats(appointmentsWithSimulatedDetails)
-                // **MODIFIED: Pass the updated list to this function too**
-                calculateMedicationInsights(appointmentsWithSimulatedDetails)
-                calculateTypesPerDoctorStats(appointmentsWithSimulatedDetails)
-                calculateStatusPerTypeStats(appointmentsWithSimulatedDetails)
-
-                _isLoading.value = false
+                _rawAppointments.value = appointments
+                calculateAppointmentTypeStats(appointments)
+                calculateStatusStats(appointments)
+                calculateTypesPerDoctorStats(appointments)
+                calculateStatusPerTypeStats(appointments)
             },
             onError = { exception ->
-                _errorMessage.value = "Error fetching records: ${exception.message}"
-                _appointmentTypeStats.value = emptyMap()
-                _statusStats.value = emptyMap()
-                _frequentMedications.value = emptyList()
-                _uniqueMedications.value = emptySet()
-                _typesPerDoctorStats.value = emptyMap()
-                _statusPerTypeStats.value = emptyMap()
+                _errorMessage.value = "Error fetching appointments: ${exception.message}"
                 _isLoading.value = false
             }
         )
-    }
 
-    // **MODIFIED: Renamed and updated simulation logic**
-    private fun simulateMedicalDetails(appointments: List<Appointment>): List<Appointment> {
-        return appointments.map { appointment ->
-            // Decide if this appointment should have simulated medical details
-            if (Random.nextFloat() < 0.7) { // 70% of appointments get some simulated details
-
-                // Start with existing medicalDetails or create a new one
-                var currentMedicalDetails = appointment.medicalDetails ?: MedicalRecordDetails(appointmentId = appointment.id)
-
-                // Simulate prescriptions (only if this appointment gets details)
-                if (Random.nextFloat() < 0.8) { // 80% of those with details get prescriptions
-                    val numberOfMeds = Random.nextInt(1, 3)
-                    val selectedMeds = mockMedicationsList.shuffled().take(numberOfMeds)
-                    currentMedicalDetails = currentMedicalDetails.copy(prescribedMedications = selectedMeds)
-                }
-
-                // Optionally, simulate other fields like diagnosis or reasonForVisit if needed for stats
-                // For example:
-                if (currentMedicalDetails.reasonForVisit.isBlank() && Random.nextFloat() < 0.5) {
-                    currentMedicalDetails = currentMedicalDetails.copy(reasonForVisit = "Simulated Visit Reason")
-                }
-                if (currentMedicalDetails.diagnosis.isBlank() && Random.nextFloat() < 0.6) {
-                    currentMedicalDetails = currentMedicalDetails.copy(diagnosis = "Simulated Diagnosis")
-                }
-                // Not simulating checkInRecord for simplicity in this statistics view,
-                // unless you have a specific statistic related to it.
-
-                appointment.copy(medicalDetails = currentMedicalDetails)
-            } else {
-                // No simulated medical details for this appointment, return as is
-                // (medicalDetails will remain whatever it was, likely null or its original state)
-                appointment
+        viewModelScope.launch {
+            val medicalRecordsResult = medicalRecordRepository.getMedicalRecords(userId)
+            medicalRecordsResult.onSuccess { records ->
+                _rawMedicalRecords.value = records
+                calculateMedicationInsights(records)
+                calculateRecordTypeStats(records)
+            }.onFailure { exception ->
+                _errorMessage.value = (_errorMessage.value ?: "") + "\nError fetching medical records: ${exception.message}"
             }
+            _isLoading.value = false // Simplified loading state
         }
     }
 
+    // --- Statistics Calculation Functions ---
+    // Make sure these are INSIDE the class
     private fun calculateAppointmentTypeStats(appointments: List<Appointment>) {
         _appointmentTypeStats.value = appointments
             .groupBy { it.appointmentType.ifBlank { "Unspecified" } }
@@ -165,24 +152,6 @@ class MedicalRecordsViewModel(
         _statusStats.value = appointments
             .groupBy { it.status.trim().ifBlank { "Unknown" } }
             .mapValues { it.value.size }
-    }
-
-    // **MODIFIED: Updated to access medications via medicalDetails**
-    private fun calculateMedicationInsights(appointments: List<Appointment>) {
-        val allPrescribedMedsList = appointments
-            .mapNotNull { it.medicalDetails } // Get only appointments that have medicalDetails
-            .flatMap { it.prescribedMedications } // Then get the prescribedMedications from those details
-
-        _frequentMedications.value = allPrescribedMedsList
-            .groupBy { it.name } // PrescribedMedication data class should have a 'name' field
-            .mapValues { it.value.size }
-            .toList()
-            .sortedByDescending { it.second }
-            .take(5)
-
-        _uniqueMedications.value = allPrescribedMedsList
-            .map { it.name } // PrescribedMedication data class should have a 'name' field
-            .toSet()
     }
 
     private fun calculateTypesPerDoctorStats(appointments: List<Appointment>) {
@@ -203,8 +172,33 @@ class MedicalRecordsViewModel(
             }
     }
 
+    private fun calculateMedicationInsights(medicalRecords: List<MedicalRecord>) {
+        val allPrescribedMedsList = medicalRecords
+            .flatMap { it.prescribedMedications }
+
+        _frequentMedications.value = allPrescribedMedsList
+            .groupBy { it.name }
+            .mapValues { it.value.size }
+            .toList()
+            .sortedByDescending { it.second }
+            .take(5)
+
+        _uniqueMedicationsCount.value = allPrescribedMedsList
+            .map { it.name }
+            .distinct()
+            .size
+    }
+
+    private fun calculateRecordTypeStats(medicalRecords: List<MedicalRecord>) {
+        _recordTypeStats.value = medicalRecords
+            .groupBy { it.recordType.ifBlank { "Uncategorized" } }
+            .mapValues { it.value.size }
+    }
+
     override fun onCleared() {
         super.onCleared()
-        appointmentsListenerRegistration?.remove()
+        appointmentsListenerReg?.remove()
+        // medicalRecordsListenerReg?.remove()
     }
+
 }

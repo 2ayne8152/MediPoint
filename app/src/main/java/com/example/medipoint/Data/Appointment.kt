@@ -18,5 +18,4 @@ data class Appointment(
     val status: String = "Scheduled", // e.g., "Completed", "Cancelled", "Rescheduled"
     val notes: String = "",           // General notes about the appointment itself
 
-    val medicalDetails: MedicalRecordDetails? = null
 )

@@ -49,7 +49,6 @@ fun HomeScreen(
     // Collect appointments from the ViewModel
     val appointments by bookingViewModel.appointments.collectAsState()
 
-
     // Start listening once when the screen enters
     LaunchedEffect(Unit) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: "TEST_USER"
