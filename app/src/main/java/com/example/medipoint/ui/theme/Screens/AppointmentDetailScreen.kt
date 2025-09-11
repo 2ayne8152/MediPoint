@@ -61,7 +61,6 @@ fun AppointmentDetailScreen(
     val checkInRecord by viewModel.checkInRecord.collectAsState()
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
 
-    // ✅ Load existing check-in when screen opens
     LaunchedEffect(appointmentId) {
         viewModel.loadUserCheckInRecord(appointmentId)
     }

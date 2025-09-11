@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -19,21 +20,27 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.medipoint.Data.Appointment
 import com.example.medipoint.Viewmodels.BookingViewModel
+import com.google.firebase.auth.FirebaseAuth
 import java.text.SimpleDateFormat
 import java.util.Locale
 
-
-@Preview (showBackground = true)
+@Preview(showBackground = true)
 @Composable
 fun AllAppointmentsScreen(
     bookingViewModel: BookingViewModel = viewModel(),
     onDetailClick: (String) -> Unit = {}
 ) {
+    // Real-time appointments state
     val appointments by bookingViewModel.appointments.collectAsState()
 
-    // Filter by status
-    val upcoming = appointments.filter { it.status == "Scheduled" }
-    val previous = appointments.filter { it.status == "Completed" }
+    // Start Firestore listener when this screen appears
+    LaunchedEffect(Unit) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: "TEST_USER"
+        bookingViewModel.startAppointmentsListener()
+    }
+
+    // Filter appointments into upcoming and previous
+    val (upcoming, previous) = filterAppointments(appointments)
 
     Column(
         modifier = Modifier
@@ -89,11 +96,10 @@ fun AllAppointmentsScreen(
     }
 }
 
-
 /**
- * Splits appointments into upcoming vs previous
+ * Filters appointments into upcoming and previous using both status and date.
  */
-private fun splitAppointments(appointments: List<Appointment>): Pair<List<Appointment>, List<Appointment>> {
+private fun filterAppointments(appointments: List<Appointment>): Pair<List<Appointment>, List<Appointment>> {
     val sdf = SimpleDateFormat("d/M/yyyy hh:mm a", Locale.getDefault())
     val now = System.currentTimeMillis()
 
@@ -107,13 +113,19 @@ private fun splitAppointments(appointments: List<Appointment>): Pair<List<Appoin
             0L
         }
 
-        if (millis >= now) {
+        // Upcoming: Scheduled AND in the future
+        if (appt.status == "Scheduled" && millis >= now) {
             upcoming.add(appt)
         } else {
+            // Previous: Completed OR past date
             previous.add(appt)
         }
     }
 
+    // Sort upcoming ascending (soonest first)
+    upcoming.sortBy { sdf.parse("${it.date} ${it.time}")?.time ?: 0L }
+    // Sort previous descending (latest first)
+    previous.sortByDescending { sdf.parse("${it.date} ${it.time}")?.time ?: 0L }
+
     return Pair(upcoming, previous)
 }
-
