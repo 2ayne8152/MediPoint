@@ -41,7 +41,7 @@ fun MedicalRecordScreen(
     val appointmentTypeStats by viewModel.appointmentTypeStats.collectAsState()
     val statusStats by viewModel.statusStats.collectAsState()
     val frequentMedications by viewModel.frequentMedications.collectAsState()
-    val uniqueMedications by viewModel.uniqueMedications.collectAsState()
+    val uniqueMedicationsCount by viewModel.uniqueMedicationsCount.collectAsState() // New line
     val typesPerDoctorStats by viewModel.typesPerDoctorStats.collectAsState()
     val statusPerTypeStats by viewModel.statusPerTypeStats.collectAsState()
 
@@ -123,10 +123,10 @@ fun MedicalRecordScreen(
                                 }
                             }
                             Spacer(modifier = Modifier.height(12.dp))
-                            Text("Unique Medications Prescribed (Simulated): ${uniqueMedications.size}", style = MaterialTheme.typography.titleSmall)
-                            if (uniqueMedications.isNotEmpty()) {
-                                Text(uniqueMedications.joinToString(", "), style = MaterialTheme.typography.bodySmall)
-                            }
+                            Text(
+                                "Unique Medications Prescribed: $uniqueMedicationsCount", // Directly use the count
+                                style = MaterialTheme.typography.titleSmall
+                            )
                         }
                     }
 
