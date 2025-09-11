@@ -18,23 +18,5 @@ data class Appointment(
     val status: String = "Scheduled", // e.g., "Completed", "Cancelled", "Rescheduled"
     val notes: String = "",           // General notes about the appointment itself
 
-    // --- Medical Record Specific Fields ---
-
-    // Reason for Visit / Symptoms
-    val reasonForVisit: String = "",      // User's description of symptoms or concern
-
-    // Outcome / Doctor's Notes
-    val diagnosis: String = "",           // Doctor’s primary diagnosis
-    val secondaryDiagnoses: List<String> = emptyList(), // Any other diagnoses
-
-    // Using a more structured PrescribedMedication data class is often better
-    // val prescribedMedications: List<String> = emptyList(), // Simple list of medication names
-    val prescribedMedications: List<PrescribedMedication> = emptyList(), // More structured
-
-    val treatmentPlan: String = "",       // Detailed treatment plan
-    val followUpInstructions: String = "",// e.g., "Come back in 2 weeks", "Perform X test"
-
-
-    // Check-In Record (as previously defined)
-    val checkInRecord: CheckInRecord? = null // Embeds the latest check-in for this appointment
+    val medicalDetails: MedicalRecordDetails? = null
 )
