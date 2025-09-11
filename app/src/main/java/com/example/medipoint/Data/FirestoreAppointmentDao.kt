@@ -23,22 +23,26 @@ class FirestoreAppointmentDao(
                 return Result.failure(Exception("This doctor already has an appointment at that time."))
             }
 
-            // Add appointment
-            val map = hashMapOf(
-                "doctorName" to appointment.doctorName,
-                "appointmentType" to appointment.appointmentType,
-                "date" to appointment.date,
-                "time" to appointment.time,
-                "status" to appointment.status,
-                "notes" to appointment.notes,
-                "userId" to appointment.userId
+            // Save appointment and grab Firestore document ID
+            val docRef = db.collection("appointments").document()
+            val appointmentWithId = appointment.copy(id = docRef.id)
+
+            // Save appointment
+            docRef.set(appointmentWithId).await()
+
+            // 🔹 Create default CheckInRecord
+            val checkInRecord = CheckInRecord(
+                checkedIn = false,
+                userId = appointment.userId,
+                appointmentId = docRef.id
             )
+            docRef.collection("checkin")
+                .document(appointment.userId)
+                .set(checkInRecord)
+                .await()
 
-            // Save and grab Firestore document ID
-            val docRef = db.collection("appointments").add(map).await()
-
-            // Return a **new copy** with Firestore id
-            Result.success(appointment.copy(id = docRef.id))
+            // Return success
+            Result.success(appointmentWithId)
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -58,12 +62,25 @@ class FirestoreAppointmentDao(
         }
     }
 
+    override suspend fun updateAppointmentStatus(appointmentId: String, status: String): Result<Unit> {
+        return try {
+            val db = FirebaseFirestore.getInstance()
+            db.collection("appointments")
+                .document(appointmentId)
+                .update("status", status)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     override fun listenAppointments(
         userId: String,
         onDataChange: (List<Appointment>) -> Unit,
         onError: (Exception) -> Unit
     ): ListenerRegistration {
-       return db.collection("appointments")
+        return db.collection("appointments")
             .whereEqualTo("userId", userId)
             .addSnapshotListener { snapshot, e ->
                 if (e != null) {
@@ -74,7 +91,6 @@ class FirestoreAppointmentDao(
                 onDataChange(appointments)
             }
     }
-
 }
 
 private fun DocumentSnapshot.toAppointment(): Appointment? {
@@ -85,4 +101,3 @@ private fun DocumentSnapshot.toAppointment(): Appointment? {
         null
     }
 }
-
