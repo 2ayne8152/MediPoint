@@ -125,7 +125,8 @@ fun MainAppContent(
 
     val showBackButton = currentRoute == MedipointScreens.AppointmentDetailScreen.route ||
             currentRoute == MedipointScreens.AllAppointmentsScreen.route ||
-            currentRoute == MedipointScreens.SettingsScreen.route
+            currentRoute == MedipointScreens.SettingsScreen.route ||
+            currentRoute == MedipointScreens.MedicalRecordsScreen.route
 
     Scaffold(
         topBar = {
@@ -137,6 +138,7 @@ fun MainAppContent(
                                 MedipointScreens.AppointmentDetailScreen.route -> "Appointment Details"
                                 MedipointScreens.AllAppointmentsScreen.route -> "All Appointments"
                                 MedipointScreens.SettingsScreen.route -> "Settings"
+                                MedipointScreens.MedicalRecordsScreen.route -> "Medical records"
                                 else -> ""
                             },
                             style = MaterialTheme.typography.titleMedium
