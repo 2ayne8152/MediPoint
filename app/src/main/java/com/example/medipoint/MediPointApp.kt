@@ -210,7 +210,7 @@ fun MainAppContent(
             }
             composable(MedipointScreens.AlertsScreen.route) {
                 AlertsScreen(
-
+                    onDetailClick = { appointmentId -> navController.navigate(MedipointScreens.appointmentDetail(appointmentId)) }
                 )
             }
         }

@@ -64,8 +64,7 @@ class BookingViewModel(
                     val alert = Alerts(
                         id = appointmentId.ifEmpty { alertsRepository.generateAlertId() },
                         title = "Appointment Reminder",
-                        message = "You have an appointment with Dr. $doctorName on $date.",
-                        date = date,
+                        message = "You have an appointment with $doctorName on $date.",
                         userId = userId
                     )
                     alertsRepository.addAlertToFirestore(alert)

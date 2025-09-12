@@ -9,5 +9,6 @@ data class Alerts(
     val title: String = "",
     val message: String = "",
     val date: String = "",
-    val userId: String = ""
+    val userId: String = "",
+    val isRead: Boolean = false
 )
