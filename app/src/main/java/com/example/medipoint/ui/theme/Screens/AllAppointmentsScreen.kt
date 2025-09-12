@@ -17,13 +17,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.medipoint.Data.Appointment
+import com.example.medipoint.Data.FirestoreAppointmentDao
+import com.example.medipoint.Repository.AlertsRepository
+import com.example.medipoint.Repository.AppointmentRepository
 import com.example.medipoint.Viewmodels.BookingViewModel
+import com.example.medipoint.Viewmodels.BookingViewModelFactory
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 @Composable
 fun AllAppointmentsScreen(
-    bookingViewModel: BookingViewModel = viewModel(),
+    bookingViewModel: BookingViewModel = viewModel(
+        factory = BookingViewModelFactory(
+            appointmentRepository = AppointmentRepository(FirestoreAppointmentDao()),
+            alertsRepository = AlertsRepository()
+        )
+    ),
     onDetailClick: (String) -> Unit = {}
 ) {
     val appointments by bookingViewModel.appointments.collectAsState()
