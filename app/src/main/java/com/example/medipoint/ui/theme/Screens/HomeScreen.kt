@@ -37,8 +37,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.medipoint.Data.FirestoreAppointmentDao
 import com.example.medipoint.R
+import com.example.medipoint.Repository.AlertsRepository
+import com.example.medipoint.Repository.AppointmentRepository
 import com.example.medipoint.Viewmodels.BookingViewModel
+import com.example.medipoint.Viewmodels.BookingViewModelFactory
 import com.example.medipoint.Viewmodels.ProfileViewModel
 
 @Composable
@@ -46,7 +50,12 @@ fun HomeScreen(
     onBookAppointmentClick: () -> Unit,
     onDetailClick: (String) -> Unit,
     onViewAllClick: () -> Unit,
-    bookingViewModel: BookingViewModel = viewModel(),
+    bookingViewModel: BookingViewModel = viewModel(
+        factory = BookingViewModelFactory(
+            appointmentRepository = AppointmentRepository(FirestoreAppointmentDao()),
+            alertsRepository = AlertsRepository()
+        )
+    ),
     profileViewModel: ProfileViewModel = viewModel()
 ) {
     val appointments by bookingViewModel.appointments.collectAsState()

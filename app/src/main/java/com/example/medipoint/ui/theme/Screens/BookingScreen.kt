@@ -38,12 +38,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.medipoint.Data.FirestoreAppointmentDao
+import com.example.medipoint.Repository.AlertsRepository
+import com.example.medipoint.Repository.AppointmentRepository
 import com.example.medipoint.Viewmodels.BookingViewModel
+import com.example.medipoint.Viewmodels.BookingViewModelFactory
 import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
+fun BookingScreen(
+    viewModel: BookingViewModel = viewModel(
+        factory = BookingViewModelFactory(
+            appointmentRepository = AppointmentRepository(FirestoreAppointmentDao()),
+            alertsRepository = AlertsRepository() // Pass the correct context if needed
+        )
+    )
+) {
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
 
@@ -232,7 +243,7 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
                 .fillMaxWidth()
                 .height(50.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (isFormValid) MaterialTheme.colorScheme.primary  else Color.Gray
+                containerColor = if (isFormValid) MaterialTheme.colorScheme.primary else Color.Gray
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -259,34 +270,9 @@ private fun showAndroidDatePicker(
         calendar.get(Calendar.DAY_OF_MONTH)
     )
 
-    // Prevent selecting past dates and allow only dates 2 days after today
-    val twoDaysLater = Calendar.getInstance().apply {
-        add(Calendar.DAY_OF_YEAR, 2)
-    }
-    datePickerDialog.datePicker.minDate = twoDaysLater.timeInMillis
+    // Prevent selecting past dates
+    datePickerDialog.datePicker.minDate = System.currentTimeMillis() - 1000
 
     datePickerDialog.show()
 }
-
-// Use for testing
-//private fun showAndroidDatePicker(
-//    context: Context,
-//    calendar: Calendar,
-//    onDateSelected: (String) -> Unit
-//) {
-//    val datePickerDialog = DatePickerDialog(
-//        context,
-//        { _, year, month, dayOfMonth ->
-//            onDateSelected("$dayOfMonth/${month + 1}/$year")
-//        },
-//        calendar.get(Calendar.YEAR),
-//        calendar.get(Calendar.MONTH),
-//        calendar.get(Calendar.DAY_OF_MONTH)
-//    )
-//
-//    // Prevent selecting past dates
-//    datePickerDialog.datePicker.minDate = System.currentTimeMillis() - 1000
-//
-//    datePickerDialog.show()
-//}
 

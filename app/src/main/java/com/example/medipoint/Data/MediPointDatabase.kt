@@ -4,12 +4,15 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [MedicalInfoEntity::class], version = 1, exportSchema = false)
+@Database(entities = [MedicalInfoEntity::class, Alerts::class], version = 1, exportSchema = false)
 // Increment version if you change schema in the future and provide migrations
 abstract class MediPointDatabase : RoomDatabase() {
 
     abstract fun medicalInfoDao(): MedicalInfoDao // This provides your DAO
+    abstract fun alertsDao(): AlertsDao
 
     companion object {
         @Volatile // Ensures that the value of INSTANCE is always up-to-date and the same to all execution threads
@@ -33,5 +36,6 @@ abstract class MediPointDatabase : RoomDatabase() {
                 instance
             }
         }
+
     }
 }
