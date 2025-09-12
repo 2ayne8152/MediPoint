@@ -12,6 +12,8 @@ import com.example.medipoint.Repository.AppointmentRepository
 import com.example.medipoint.Repository.CheckInRepository
 import com.google.android.gms.location.LocationServices
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -43,6 +45,11 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
 
     private val checkInDao = FirestoreCheckInDao()
     private val checkInRepository = CheckInRepository(checkInDao)
+
+    init {
+        // Start periodic status updater
+        startAutoUpdateMissedAppointments()
+    }
 
     @SuppressLint("MissingPermission")
     fun attemptCheckIn(appointmentId: String) {
@@ -107,7 +114,7 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
                     try { sdf.parse("${it.date} ${it.time}")?.time } catch (e: Exception){ null }
                 }
 
-                // 🔹 After loading details, evaluate status
+                // Evaluate appointment status after loading details
                 evaluateAppointmentStatus(appointmentId)
 
             } else {
@@ -130,7 +137,7 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun evaluateAppointmentStatus(appointmentId: String) {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             val appt = appointment.value ?: return@launch
             val appointmentTime = appointmentDateTime.value ?: return@launch
             val now = System.currentTimeMillis()
@@ -142,6 +149,27 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
                 } else {
                     appointmentRepository.updateAppointmentStatus(appointmentId, "Missed")
                 }
+            }
+        }
+    }
+
+    private fun startAutoUpdateMissedAppointments() {
+        viewModelScope.launch(Dispatchers.IO) {
+            while (true) {
+                val currentUser = auth.currentUser ?: break
+                val result = appointmentRepository.getAppointments(currentUser.uid)
+                val appointments = result.getOrNull() ?: emptyList()
+
+                appointments.forEach { appt ->
+                    val sdf = SimpleDateFormat("d/M/yyyy hh:mm a", Locale.getDefault())
+                    val apptTime = try { sdf.parse("${appt.date} ${appt.time}")?.time } catch (e: Exception){ null }
+                    if (apptTime != null && System.currentTimeMillis() > apptTime + 10 * 60 * 1000) {
+                        if (appt.status != "Checked-In" && appt.status != "Completed" && appt.status != "Missed") {
+                            appointmentRepository.updateAppointmentStatus(appt.id, "Missed")
+                        }
+                    }
+                }
+                delay(60 * 1000) // Check every 1 minute
             }
         }
     }
