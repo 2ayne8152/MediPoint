@@ -114,34 +114,46 @@ fun MediPointApp() {
 @Composable
 fun MainAppContent(onSignOut: () -> Unit) {
     val navController = rememberNavController()
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = backStackEntry?.destination?.route
+
+    // Determine if back button should show
+    val showBackButton = currentRoute == MedipointScreens.AppointmentDetailScreen.route ||
+            currentRoute == MedipointScreens.AllAppointmentsScreen.route
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text("Appointment Details", style = MaterialTheme.typography.titleMedium)
-                        Text("Dr. Johnson", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            Icons.Default.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.White
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF0A0A1A),
-                    titleContentColor = Color.White
+            if (showBackButton) {
+                TopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                text = when (currentRoute) {
+                                    MedipointScreens.AppointmentDetailScreen.route -> "Appointment Details"
+                                    MedipointScreens.AllAppointmentsScreen.route -> "All Appointments"
+                                    else -> ""
+                                },
+                                style = MaterialTheme.typography.titleMedium
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = { navController.popBackStack() }) {
+                            Icon(
+                                Icons.Default.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.White
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color(0xFF0A0A1A),
+                        titleContentColor = Color.White
+                    )
                 )
-            )
+            }
         },
-        bottomBar = {
-            BottomNavigationBar(navController)
-        }
+        bottomBar = { BottomNavigationBar(navController) }
     ) { innerPadding ->
         NavHost(
             navController = navController,
@@ -150,15 +162,9 @@ fun MainAppContent(onSignOut: () -> Unit) {
         ) {
             composable(route = MedipointScreens.HomeScreen.route) {
                 HomeScreen(
-                    onBookAppointmentClick = {
-                        navController.navigate(MedipointScreens.BookingScreen.route)
-                    },
-                    onDetailClick = { appointmentId ->
-                        navController.navigate(MedipointScreens.appointmentDetail(appointmentId))
-                    },
-                    onViewAllClick = {
-                        navController.navigate(MedipointScreens.AllAppointmentsScreen.route)
-                    }
+                    onBookAppointmentClick = { navController.navigate(MedipointScreens.BookingScreen.route) },
+                    onDetailClick = { appointmentId -> navController.navigate(MedipointScreens.appointmentDetail(appointmentId)) },
+                    onViewAllClick = { navController.navigate(MedipointScreens.AllAppointmentsScreen.route) }
                 )
             }
             composable(route = MedipointScreens.BookingScreen.route) {
@@ -171,24 +177,19 @@ fun MainAppContent(onSignOut: () -> Unit) {
                 val appointmentId = backStackEntry.arguments?.getString("appointmentId") ?: ""
                 AppointmentDetailScreen(
                     appointmentId = appointmentId,
-                    navController = navController,
+                    navController = navController
                 )
             }
             composable(route = MedipointScreens.ProfileScreen.route) {
                 ProfileScreen(onSignOut = onSignOut,
-                    onNavigateToMedicalRecords = { // New navigation callback
-                        navController.navigate(MedipointScreens.MedicalRecordsScreen.route)
-                    })
+                    onNavigateToMedicalRecords = { navController.navigate(MedipointScreens.MedicalRecordsScreen.route) })
             }
             composable(route = MedipointScreens.MedicalRecordsScreen.route) {
-                // You'll create MedicalRecordScreen and its ViewModel
-                MedicalRecordScreen(viewModel()) // Example: val medicalRecordsViewModel: MedicalRecordsViewModel = viewModel()
+                MedicalRecordScreen(viewModel())
             }
             composable(route = MedipointScreens.AllAppointmentsScreen.route) {
                 AllAppointmentsScreen(
-                    onDetailClick = { appointmentId ->
-                        navController.navigate(MedipointScreens.appointmentDetail(appointmentId))
-                    }
+                    onDetailClick = { appointmentId -> navController.navigate(MedipointScreens.appointmentDetail(appointmentId)) }
                 )
             }
         }

@@ -106,6 +106,10 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
                 _appointmentDateTime.value = appt?.let {
                     try { sdf.parse("${it.date} ${it.time}")?.time } catch (e: Exception){ null }
                 }
+
+                // 🔹 After loading details, evaluate status
+                evaluateAppointmentStatus(appointmentId)
+
             } else {
                 _appointment.value = null
                 _appointmentDateTime.value = null
@@ -123,5 +127,22 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
 
     fun setCheckInRecord(record: CheckInRecord?) {
         _checkInRecord.value = record
+    }
+
+    private fun evaluateAppointmentStatus(appointmentId: String) {
+        viewModelScope.launch {
+            val appt = appointment.value ?: return@launch
+            val appointmentTime = appointmentDateTime.value ?: return@launch
+            val now = System.currentTimeMillis()
+
+            // give 10 min grace period
+            if (now > appointmentTime + 10 * 60 * 1000) {
+                if (_checkInRecord.value?.checkedIn == true) {
+                    appointmentRepository.updateAppointmentStatus(appointmentId, "Completed")
+                } else {
+                    appointmentRepository.updateAppointmentStatus(appointmentId, "Missed")
+                }
+            }
+        }
     }
 }

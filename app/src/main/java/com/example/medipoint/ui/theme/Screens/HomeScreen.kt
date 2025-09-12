@@ -39,7 +39,6 @@ import com.example.medipoint.R
 import com.example.medipoint.Viewmodels.BookingViewModel
 import com.example.medipoint.Viewmodels.ProfileViewModel
 
-
 @Composable
 fun HomeScreen(
     onBookAppointmentClick: () -> Unit,
@@ -50,12 +49,11 @@ fun HomeScreen(
 ) {
     // Collect appointments from the ViewModel
     val appointments by bookingViewModel.appointments.collectAsState()
-    val userProfileState by profileViewModel.userProfile.collectAsState() // This gets UserProfile?
+    val userProfileState by profileViewModel.userProfile.collectAsState()
     val currentUserDisplayName = userProfileState?.displayName?.takeIf { it.isNotBlank() } ?: "User"
 
     // Start listening once when the screen enters
     LaunchedEffect(Unit) {
-//        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: "TEST_USER"
         bookingViewModel.startAppointmentsListener()
     }
 
@@ -67,11 +65,11 @@ fun HomeScreen(
     ) {
         // Greeting
         Text(
-            text = "Good morning, $currentUserDisplayName", // Use the dynamic display name
+            text = "Good morning, $currentUserDisplayName",
             style = MaterialTheme.typography.headlineSmall
         )
         Text(
-            text = "You have ${appointments.size} upcoming appointment${if (appointments.size == 1) "" else "s"}",
+            text = "You have ${appointments.count { it.status == "Scheduled" || it.status == "Confirmed" }} upcoming appointment${if (appointments.count { it.status == "Scheduled" || it.status == "Confirmed" } == 1) "" else "s"}",
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray,
             modifier = Modifier.padding(top = 4.dp)
@@ -145,8 +143,10 @@ fun HomeScreen(
             )
         }
 
-        // Render appointments from Firestore
-        if (appointments.isEmpty()) {
+        // Filter only Scheduled or Confirmed appointments
+        val upcomingAppointments = appointments.filter { it.status == "Scheduled" || it.status == "Confirmed" }
+
+        if (upcomingAppointments.isEmpty()) {
             Text(
                 "No upcoming appointments.",
                 color = Color.Gray,
@@ -154,17 +154,15 @@ fun HomeScreen(
                 modifier = Modifier.padding(top = 8.dp)
             )
         } else {
-            appointments.forEach { appt ->
-                if (appt.status == "Scheduled") {
-                    AppointmentCard(
-                        doctor = appt.doctorName,
-                        specialty = appt.appointmentType,
-                              date = appt.date,
-                        time = appt.time,
-                        modifier = Modifier.padding(top = 8.dp),
-                        onDetailClick = { onDetailClick(appt.id) }
-                    )
-                }
+            upcomingAppointments.forEach { appt ->
+                AppointmentCard(
+                    doctor = appt.doctorName,
+                    specialty = appt.appointmentType,
+                    date = appt.date,
+                    time = appt.time,
+                    modifier = Modifier.padding(top = 8.dp),
+                    onDetailClick = { onDetailClick(appt.id) }
+                )
             }
         }
     }
