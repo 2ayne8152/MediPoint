@@ -44,22 +44,34 @@ class BookingViewModel(
             return
         }
 
-        val newAppointment = Appointment(
-            doctorName = doctorName,
-            appointmentType = appointmentType,
-            date = date,
-            time = time,
-            status = "Scheduled",
-            notes = notes,
-            userId = userId
-        )
-
         viewModelScope.launch {
             try {
+                // Get all appointments for this date & time
+                val existingAppointments = appointmentRepository.getAppointmentsByDateTime(date, time)
+
+                // Filter out cancelled appointments and only check for the same doctor
+                val activeAppointments = existingAppointments.filter { it.status != "Cancelled" && it.doctorName == doctorName }
+
+                if (activeAppointments.isNotEmpty()) {
+                    _saveStatus.value = Result.failure(Exception("This time slot is already booked"))
+                    return@launch
+                }
+
+                // Create appointment
+                val newAppointment = Appointment(
+                    doctorName = doctorName,
+                    appointmentType = appointmentType,
+                    date = date,
+                    time = time,
+                    status = "Scheduled",
+                    notes = notes,
+                    userId = userId
+                )
+
                 val result = appointmentRepository.addAppointment(newAppointment)
                 _saveStatus.value = result
 
-                // Only create alert if appointment saved successfully
+                // Create alert if appointment saved successfully
                 result.getOrNull()?.id?.let { appointmentId ->
                     val alert = Alerts(
                         id = appointmentId.ifEmpty { alertsRepository.generateAlertId() },
@@ -70,6 +82,7 @@ class BookingViewModel(
                     )
                     alertsRepository.addAlertToFirestore(alert)
                 }
+
             } catch (e: Exception) {
                 _saveStatus.value = Result.failure(e)
             }

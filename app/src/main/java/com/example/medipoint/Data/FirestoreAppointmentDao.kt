@@ -11,6 +11,7 @@ class FirestoreAppointmentDao(
 
     override suspend fun addAppointment(appointment: Appointment): Result<Appointment> {
         return try {
+            // Fetch appointments with the same doctor, date, and time
             val existing = db.collection("appointments")
                 .whereEqualTo("doctorName", appointment.doctorName)
                 .whereEqualTo("date", appointment.date)
@@ -18,7 +19,14 @@ class FirestoreAppointmentDao(
                 .get()
                 .await()
 
-            if (!existing.isEmpty) return Result.failure(Exception("Doctor already has appointment at this time"))
+            // Filter in code: ignore cancelled appointments
+            val activeAppointments = existing.documents
+                .mapNotNull { it.toAppointment() }
+                .filter { it.status != "Cancelled" }
+
+            if (activeAppointments.isNotEmpty()) {
+                return Result.failure(Exception("Doctor already has an appointment at this time"))
+            }
 
             val docRef = db.collection("appointments").add(appointment).await()
             Result.success(appointment.copy(id = docRef.id))
@@ -74,6 +82,21 @@ class FirestoreAppointmentDao(
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    override suspend fun getAppointmentsByDateTime(date: String, time: String): List<Appointment> {
+        return try {
+            val snapshot = db.collection("appointments")
+                .whereEqualTo("date", date)
+                .whereEqualTo("time", time)
+                .get()
+                .await()
+
+            snapshot.documents.mapNotNull { it.toAppointment() }
+                .filter { it.status != "Cancelled" }
+        } catch (e: Exception) {
+            emptyList()
         }
     }
 }
