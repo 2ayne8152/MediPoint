@@ -38,6 +38,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.medipoint.ui.theme.Screens.AlertsScreen
 import com.example.medipoint.ui.theme.Screens.AllAppointmentsScreen
 import com.example.medipoint.ui.theme.Screens.AppointmentDetailScreen
 import com.example.medipoint.ui.theme.Screens.BookingScreen
@@ -60,7 +61,8 @@ enum class MedipointScreens(val route: String) {
     RegistrationScreen("registration"),
     MedicalRecordsScreen("medicalRecords"),
     AllAppointmentsScreen("allAppointments"),
-    SettingsScreen("settings");
+    SettingsScreen("settings"),
+    AlertsScreen("alerts");
 
     companion object {
         fun appointmentDetail(appointmentId: String): String {
@@ -206,6 +208,11 @@ fun MainAppContent(
                     onToggleTheme = onToggleDarkMode
                 )
             }
+            composable(MedipointScreens.AlertsScreen.route) {
+                AlertsScreen(
+
+                )
+            }
         }
     }
 }
@@ -230,7 +237,7 @@ fun BottomNavigationBar(navController: NavHostController) {
         )
         NavigationBarItem(
             selected = false,
-            onClick = { /* Navigate Alerts */ },
+            onClick = {navController.navigate(MedipointScreens.AlertsScreen.route)  },
             icon = { Icon(Icons.Default.Notifications, contentDescription = "Alerts") },
             label = { Text("Alerts") }
         )
@@ -240,5 +247,6 @@ fun BottomNavigationBar(navController: NavHostController) {
             icon = { Icon(Icons.Default.Person, contentDescription = "Profile") },
             label = { Text("Profile") }
         )
+
     }
 }
