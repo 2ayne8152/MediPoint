@@ -2,6 +2,7 @@ package com.example.medipoint.Viewmodels
 
 import android.annotation.SuppressLint
 import android.app.Application
+import androidx.core.net.ParseException
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.medipoint.Data.Appointment
@@ -19,8 +20,22 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
+sealed class DistanceBannerUiState {
+    data object Hidden : DistanceBannerUiState() // Banner is not shown
+    data class ShowBanner(
+        val message: String,
+        val actionText: String?, // e.g., "Check Distance"
+        val appointmentId: String,
+        val appointmentDetails: String, // e.g., "Dr. Smith at 10:00 AM"
+        val isError: Boolean = false,
+        val isLoadingAction: Boolean = false // If the banner action triggers a loading state
+    ) : DistanceBannerUiState()
+}
 class CheckInViewModel(application: Application) : AndroidViewModel(application) {
 
     private val hospitalLat = 37.4219983
@@ -49,6 +64,181 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
     init {
         // Start periodic status updater
         startAutoUpdateMissedAppointments()
+    }
+
+    // Helper to parse date and time string to a Date object
+    private fun parseAppointmentDateTime(dateStr: String, timeStr: String): Date? {
+        val format = SimpleDateFormat("d/M/yyyy hh:mm a", Locale.getDefault())
+        return try {
+            format.parse("$dateStr $timeStr")
+        } catch (e: ParseException) {
+            e.printStackTrace()
+            null
+        }
+    }
+
+    fun prepareDistanceCheckBannerForNextAppointment(hoursWindow: Int = 48) {
+        val currentUser = auth.currentUser ?: run {
+            _distanceBannerState.value = DistanceBannerUiState.Hidden // No user, no banner
+            return
+        }
+
+        viewModelScope.launch {
+            val result = appointmentRepository.getAppointments(currentUser.uid)
+            if (result.isSuccess) {
+                val appointments = result.getOrNull() ?: emptyList()
+                val now = Calendar.getInstance()
+
+                val nextUpcomingAppointment = appointments
+                    .filter { it.status == "Scheduled" }
+                    .mapNotNull { appt ->
+                        parseAppointmentDateTime(appt.date, appt.time)?.let { dateTime ->
+                            Pair(appt, dateTime)
+                        }
+                    }
+                    .filter { (_, dateTime) ->
+                        dateTime.after(now.time) // Only future appointments
+                    }
+                    .minByOrNull { (_, dateTime) -> dateTime.time } // Find the soonest
+
+                if (nextUpcomingAppointment != null) {
+                    val (appointment, appointmentDateTime) = nextUpcomingAppointment
+                    val timeDifferenceMillis = appointmentDateTime.time - now.timeInMillis
+                    val timeDifferenceHours = TimeUnit.MILLISECONDS.toHours(timeDifferenceMillis)
+
+                    if (timeDifferenceHours in 0 until hoursWindow) { // Within the specified window (e.g., next 48 hours)
+                        // Check if this appointment was already cancelled by this feature before
+                        // (This requires knowing if _distanceBannerState was previously resolved for this apptId)
+                        // For simplicity now, we'll just show it if it's scheduled.
+                        // A more robust solution might involve storing a flag or checking banner history.
+
+                        _distanceBannerState.value = DistanceBannerUiState.ShowBanner(
+                            message = "Your appointment with ${appointment.doctorName} on ${appointment.date} is approaching.",
+                            actionText = "Check Distance",
+                            appointmentId = appointment.id,
+                            appointmentDetails = "with ${appointment.doctorName} at ${appointment.time} on ${appointment.date}",
+                            isError = false,
+                            isLoadingAction = false
+                        )
+                    } else {
+                        _distanceBannerState.value = DistanceBannerUiState.Hidden
+                    }
+                } else {
+                    _distanceBannerState.value = DistanceBannerUiState.Hidden
+                }
+            } else {
+                // Handle error fetching appointments - maybe show a generic error banner or log
+                _distanceBannerState.value = DistanceBannerUiState.ShowBanner(
+                    message = "Could not load appointment details to check for distance alerts.",
+                    actionText = null,
+                    appointmentId = "",
+                    appointmentDetails = "",
+                    isError = true
+                )
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission") // Permissions should be checked by the UI before calling
+    fun performDistanceCheckAndCancelIfNeeded(appointmentId: String, cancellationRadiusMeters: Double) {
+        val currentUser = auth.currentUser ?: run {
+            // Update banner to an error state if user gets logged out mid-process
+            (_distanceBannerState.value as? DistanceBannerUiState.ShowBanner)?.copy(
+                message = "User not logged in. Cannot check distance.",
+                actionText = null,
+                isError = true,
+                isLoadingAction = false
+            )?.let { _distanceBannerState.value = it }
+            return
+        }
+
+        // Ensure we have appointment details for the banner messages
+        val currentBannerState = _distanceBannerState.value
+        if (currentBannerState !is DistanceBannerUiState.ShowBanner || currentBannerState.appointmentId != appointmentId) {
+            // This shouldn't happen if called correctly from the banner, but good to check
+            _distanceBannerState.value = DistanceBannerUiState.ShowBanner(
+                message = "Error: Mismatch in appointment data for distance check.",
+                actionText = null, appointmentId = appointmentId, appointmentDetails = "Unknown appointment", isError = true
+            )
+            return
+        }
+
+        _distanceBannerState.value = currentBannerState.copy(isLoadingAction = true, message = "Checking your location...")
+
+        viewModelScope.launch {
+            try {
+                val userLocation = fusedLocationClient.lastLocation.await()
+
+                if (userLocation == null) {
+                    _distanceBannerState.value = currentBannerState.copy(
+                        message = "Could not get your current location. Please ensure location services are enabled and try again.",
+                        actionText = "Check Distance", // Allow retry
+                        isError = true,
+                        isLoadingAction = false
+                    )
+                    return@launch
+                }
+
+                val distanceResults = FloatArray(1)
+                Location.distanceBetween(
+                    userLocation.latitude, userLocation.longitude,
+                    hospitalLat, hospitalLng,
+                    distanceResults
+                )
+                val distanceInMeters = distanceResults[0]
+
+                if (distanceInMeters > cancellationRadiusMeters) {
+                    // Too far, attempt to cancel
+                    _distanceBannerState.value = currentBannerState.copy(
+                        message = "You are approximately ${"%.0f".format(distanceInMeters)}m away. Cancelling appointment...",
+                        actionText = null, // No action after this point from banner
+                        isLoadingAction = true // Still loading as we cancel
+                    )
+                    val cancellationResult = appointmentRepository.cancelAppointment(appointmentId)
+                    if (cancellationResult.isSuccess) {
+                        _distanceBannerState.value = currentBannerState.copy(
+                            message = "Appointment ${currentBannerState.appointmentDetails} has been cancelled as you are too far (${"%.0f".format(distanceInMeters)}m).",
+                            actionText = null,
+                            isError = false,
+                            isLoadingAction = false
+                        )
+                    } else {
+                        _distanceBannerState.value = currentBannerState.copy(
+                            message = "You are too far (${"%.0f".format(distanceInMeters)}m). Failed to cancel appointment: ${cancellationResult.exceptionOrNull()?.message}",
+                            actionText = null, // Or maybe a "Retry Cancellation" if that makes sense
+                            isError = true,
+                            isLoadingAction = false
+                        )
+                    }
+                } else {
+                    // Within range
+                    _distanceBannerState.value = currentBannerState.copy(
+                        message = "You are within range (${"%.0f".format(distanceInMeters)}m) for your appointment ${currentBannerState.appointmentDetails}.",
+                        actionText = null, // Or "Dismiss"
+                        isError = false,
+                        isLoadingAction = false
+                    )
+                }
+
+            } catch (e: SecurityException) { // Should be caught by permission check in UI, but defensive
+                e.printStackTrace()
+                _distanceBannerState.value = currentBannerState.copy(
+                    message = "Location permission denied. Cannot check distance.",
+                    actionText = "Check Distance", // Allow retry after granting permission
+                    isError = true,
+                    isLoadingAction = false
+                )
+            }
+            catch (e: Exception) {
+                e.printStackTrace()
+                _distanceBannerState.value = currentBannerState.copy(
+                    message = "An error occurred while checking distance: ${e.message}",
+                    actionText = "Check Distance", // Allow retry
+                    isError = true,
+                    isLoadingAction = false
+                )
+            }
+        }
     }
 
     @SuppressLint("MissingPermission")
