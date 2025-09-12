@@ -37,13 +37,25 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.medipoint.Data.FirestoreAppointmentDao
+import com.example.medipoint.Repository.AlertsRepository
+import com.example.medipoint.Repository.AppointmentRepository
 import com.example.medipoint.Viewmodels.BookingViewModel
 import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
+fun BookingScreen(
+    viewModel: BookingViewModel = viewModel(
+        factory = BookingViewModelFactory(
+            appointmentRepository = AppointmentRepository(FirestoreAppointmentDao()),
+            alertsRepository = AlertsRepository(LocalContext.current) // Pass the correct context if needed
+        )
+    )
+) {
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
 
@@ -232,7 +244,7 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
                 .fillMaxWidth()
                 .height(50.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (isFormValid) MaterialTheme.colorScheme.primary  else Color.Gray
+                containerColor = if (isFormValid) MaterialTheme.colorScheme.primary else Color.Gray
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
@@ -263,4 +275,17 @@ private fun showAndroidDatePicker(
     datePickerDialog.datePicker.minDate = System.currentTimeMillis() - 1000
 
     datePickerDialog.show()
+}
+
+class BookingViewModelFactory(
+    private val appointmentRepository: AppointmentRepository,
+    private val alertsRepository: AlertsRepository
+) : ViewModelProvider.Factory {
+
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(BookingViewModel::class.java)) {
+            return BookingViewModel(appointmentRepository, alertsRepository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
 }

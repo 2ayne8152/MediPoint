@@ -27,21 +27,15 @@ import com.google.firebase.auth.FirebaseAuth
 fun AlertsScreen(
     onDetailClick: (String) -> Unit = {}
 ) {
-    // Retrieve the context and create the repository
     val context = LocalContext.current
     val repository = AlertsRepository(context)
 
-    // Create ViewModel with ViewModelFactory
     val factory = AlertViewModelFactory(repository)
     val alertViewModel: AlertViewModel = viewModel(factory = factory)
 
-    // Observe the alerts state
     val alerts = alertViewModel.alerts.collectAsState()
-
-    // Observe the error state
     val error = alertViewModel.error.collectAsState()
 
-    // Start listening for alerts when the screen is first launched
     LaunchedEffect(Unit) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: "TEST_USER"
         alertViewModel.fetchAlerts(userId)

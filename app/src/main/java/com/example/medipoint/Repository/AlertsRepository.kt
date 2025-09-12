@@ -13,6 +13,7 @@ class AlertsRepository(private val context: Context) {
     private val firestore = FirebaseFirestore.getInstance()
     private val alertsDao = MediPointDatabase.getDatabase(context).alertsDao()
 
+    private val db = FirebaseFirestore.getInstance()
     suspend fun fetchAlertsFromFirestore(userId: String) {
         val alertsRef = firestore.collection("alerts")
             .whereEqualTo("userId", userId)
@@ -55,24 +56,17 @@ class AlertsRepository(private val context: Context) {
         }
     }
 
-    suspend fun addAlertToFirestore(alert: Alerts): Boolean {
+    // In AlertsRepository.kt
+    suspend fun addAlertToFirestore(alert: Alerts): Result<Boolean> {
         return try {
-            val alertData = hashMapOf(
-                "title" to alert.title,
-                "message" to alert.message,
-                "date" to alert.date,
-                "userId" to alert.userId
-            )
-
-            val docRef = firestore.collection("alerts").add(alertData).await()
-
-            // Insert the same alert into Room (for local persistence)
-            val alertWithId = alert.copy(id = docRef.id)
-            alertsDao.insertAlerts(listOf(alertWithId))
-            true
+            db.collection("alerts")
+                .document(alert.id)
+                .set(alert)
+                .await()  // Await the Firestore operation to complete
+            Result.success(true)  // If the operation succeeds, return success
         } catch (e: Exception) {
-            e.printStackTrace()
-            false
+            Result.failure(e)  // If the operation fails, return failure
         }
     }
+
 }

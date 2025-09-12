@@ -5,10 +5,9 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "alerts")
 data class Alerts(
-    @PrimaryKey val id: String,
-    val title: String,
-    val message: String,
-    val date: String,      // user-friendly date string
-    val appointmentId: Int? = null,
+    @PrimaryKey val id: String = "",
+    val title: String = "",
+    val message: String = "",
+    val date: String = "",
     val userId: String = ""
 )
