@@ -1,7 +1,11 @@
 package com.example.medipoint.ui.theme.Screens
 
-import android.content.Context
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -14,28 +18,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.medipoint.Repository.AlertsRepository
 import com.example.medipoint.Viewmodels.AlertViewModel
 import com.example.medipoint.Viewmodels.AlertViewModelFactory
-import com.example.medipoint.Repository.AlertsRepository
-import com.example.medipoint.Data.MediPointDatabase
 import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.ui.graphics.Color as ComposeColor
 
 @Preview(showBackground = true)
 @Composable
 fun AlertsScreen(
     onDetailClick: (String) -> Unit = {}
 ) {
-    val context = LocalContext.current
-    val repository = AlertsRepository(context)
-
+    val repository = AlertsRepository() // Repository instance
     val factory = AlertViewModelFactory(repository)
     val alertViewModel: AlertViewModel = viewModel(factory = factory)
 
     val alerts = alertViewModel.alerts.collectAsState()
     val error = alertViewModel.error.collectAsState()
 
+    val context = LocalContext.current
     LaunchedEffect(Unit) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: "TEST_USER"
         alertViewModel.fetchAlerts(userId)

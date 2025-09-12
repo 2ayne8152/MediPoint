@@ -1,72 +1,40 @@
 package com.example.medipoint.Repository
 
-import android.content.Context
 import com.example.medipoint.Data.Alerts
-import com.example.medipoint.Data.MediPointDatabase
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
+import java.util.UUID
 
-class AlertsRepository(private val context: Context) {
+class AlertsRepository {
 
     private val firestore = FirebaseFirestore.getInstance()
-    private val alertsDao = MediPointDatabase.getDatabase(context).alertsDao()
+    private val alertsCollection = firestore.collection("alerts")
 
-    private val db = FirebaseFirestore.getInstance()
-    suspend fun fetchAlertsFromFirestore(userId: String) {
-        val alertsRef = firestore.collection("alerts")
-            .whereEqualTo("userId", userId)
-
-        try {
-            val snapshot = alertsRef.get().await()
-            val alertsList = snapshot.documents.mapNotNull { document ->
-                Alerts(
-                    id = document.id,
-                    title = document.getString("title") ?: "",
-                    message = document.getString("message") ?: "",
-                    date = document.getString("date") ?: "",
-                    userId = document.getString("userId") ?: ""
-                )
-            }
-            // Insert fetched alerts into Room
-            withContext(Dispatchers.IO) {
-                alertsDao.insertAlerts(alertsList)
-            }
-        } catch (e: Exception) {
-            // Handle error
-        }
-    }
-
-    suspend fun getAllAlertsFromRoom(): List<Alerts> {
-        return withContext(Dispatchers.IO) {
-            alertsDao.getAllAlerts()
-        }
-    }
-
-    suspend fun insertAlertLocally(alert: Alerts) {
-        withContext(Dispatchers.IO) {
-            alertsDao.insertAlerts(listOf(alert))
-        }
-    }
-
-    suspend fun deleteAllAlertsFromRoom() {
-        withContext(Dispatchers.IO) {
-            alertsDao.deleteAllAlerts()
-        }
-    }
-
-    // In AlertsRepository.kt
-    suspend fun addAlertToFirestore(alert: Alerts): Result<Boolean> {
+    // Add an alert to Firestore safely
+    suspend fun addAlertToFirestore(alert: Alerts): Result<Alerts> {
         return try {
-            db.collection("alerts")
-                .document(alert.id)
-                .set(alert)
-                .await()  // Await the Firestore operation to complete
-            Result.success(true)  // If the operation succeeds, return success
+            alertsCollection.document(alert.id).set(alert).await()
+            Result.success(alert)
         } catch (e: Exception) {
-            Result.failure(e)  // If the operation fails, return failure
+            Result.failure(e)
         }
     }
 
+    // Fetch alerts for a user
+    suspend fun getAlertsForUser(userId: String): Result<List<Alerts>> {
+        return try {
+            val snapshot = alertsCollection
+                .whereEqualTo("userId", userId)
+                .get()
+                .await()
+
+            val alerts = snapshot.documents.mapNotNull { it.toObject(Alerts::class.java) }
+            Result.success(alerts)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Generate a unique alert ID
+    fun generateAlertId(): String = UUID.randomUUID().toString()
 }

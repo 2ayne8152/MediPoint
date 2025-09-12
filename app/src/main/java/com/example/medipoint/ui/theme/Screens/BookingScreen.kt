@@ -37,13 +37,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.medipoint.Data.FirestoreAppointmentDao
 import com.example.medipoint.Repository.AlertsRepository
 import com.example.medipoint.Repository.AppointmentRepository
 import com.example.medipoint.Viewmodels.BookingViewModel
+import com.example.medipoint.Viewmodels.BookingViewModelFactory
 import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -52,7 +51,7 @@ fun BookingScreen(
     viewModel: BookingViewModel = viewModel(
         factory = BookingViewModelFactory(
             appointmentRepository = AppointmentRepository(FirestoreAppointmentDao()),
-            alertsRepository = AlertsRepository(LocalContext.current) // Pass the correct context if needed
+            alertsRepository = AlertsRepository() // Pass the correct context if needed
         )
     )
 ) {
@@ -277,15 +276,3 @@ private fun showAndroidDatePicker(
     datePickerDialog.show()
 }
 
-class BookingViewModelFactory(
-    private val appointmentRepository: AppointmentRepository,
-    private val alertsRepository: AlertsRepository
-) : ViewModelProvider.Factory {
-
-    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        if (modelClass.isAssignableFrom(BookingViewModel::class.java)) {
-            return BookingViewModel(appointmentRepository, alertsRepository) as T
-        }
-        throw IllegalArgumentException("Unknown ViewModel class")
-    }
-}
