@@ -19,6 +19,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 // import kotlinx.coroutines.flow.collectLatest // Not directly used in the changed parts but fine to keep
 // import kotlinx.coroutines.launch // Not directly used in the changed parts but fine to keep
@@ -62,6 +63,10 @@ class MedicalRecordsViewModel(
     private val _recordTypeStats = MutableStateFlow<Map<String, Int>>(emptyMap()) // New stat
     val recordTypeStats: StateFlow<Map<String, Int>> = _recordTypeStats.asStateFlow()
 
+    // --- NEW: StateFlow for Chronic Conditions ---
+    private val _chronicConditions = MutableStateFlow<List<String>>(emptyList())
+    val chronicConditions: StateFlow<List<String>> = _chronicConditions.asStateFlow()
+
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -99,6 +104,7 @@ class MedicalRecordsViewModel(
         "Type 2 Diabetes Mellitus"
     )
 
+
     init {
         loadAllDataAndProcess()
     }
@@ -111,19 +117,19 @@ class MedicalRecordsViewModel(
         _frequentMedications.value = emptyList()
         _uniqueMedicationsCount.value = 0
         _recordTypeStats.value = emptyMap()
+        _chronicConditions.value = emptyList()
     }
     private fun generateSimulatedMedicalRecords(userId: String, count: Int): List<MedicalRecord> {
         val records = mutableListOf<MedicalRecord>()
         repeat(count) {
             val numberOfMeds = Random.nextInt(1, 4)
-            val selectedMeds = mockMedicationsList.shuffled().take(numberOfMeds) // Use predefinedMockMedications
+            val selectedMeds = mockMedicationsList.shuffled().take(numberOfMeds)
             records.add(
                 MedicalRecord(
                     userId = userId,
                     recordTitle = "Simulated Insight Record #${it + 1}",
-                    // dateOfService = ..., // Omit if not needed or handle as discussed
-                    recordType = mockRecordTypes.random(), // Use mockRecordTypes
-                    diagnosis = mockDiagnoses.random(),    // Use mockDiagnoses
+                    recordType = mockRecordTypes.random(),
+                    diagnosis = mockDiagnoses.random(),
                     prescribedMedications = selectedMeds,
                     reasonForVisit = "Simulated reason",
                     treatmentPlan = "Simulated plan",
@@ -148,7 +154,6 @@ class MedicalRecordsViewModel(
         resetStats()
 
         appointmentsListenerReg?.remove()
-        // medicalRecordsListenerReg?.remove()
 
         appointmentsListenerReg = appointmentRepository.listenAppointments(
             userId = userId,
@@ -165,22 +170,56 @@ class MedicalRecordsViewModel(
             }
         )
 
-        val simulatedMedicalRecordsForMeds = generateSimulatedMedicalRecords(userId, 15) // Generate e.g., 15 simulated records
-        calculateMedicationInsights(simulatedMedicalRecordsForMeds) // Use these simulated records for med stats
+        val simulatedMedicalRecordsForMeds = generateSimulatedMedicalRecords(userId, 15)
+        calculateMedicationInsights(simulatedMedicalRecordsForMeds) // Use these for initial display
+
+        // PLACEMENT 2: Initialize or load chronic conditions
+        // For now, using a sample list.
+        // In a real app, you'd fetch this from medicalRecordRepository, possibly within the viewModelScope.launch below
+        _chronicConditions.value = listOf("Hypertension (Simulated Initial)", "Asthma (Simulated Initial)")
 
 
         viewModelScope.launch {
             val medicalRecordsResult = medicalRecordRepository.getMedicalRecords(userId)
             medicalRecordsResult.onSuccess { records ->
                 _rawMedicalRecords.value = records
-                calculateMedicationInsights(records)
+                // IMPORTANT: Decide if real records should also update medication insights
+                // If so, call it again: calculateMedicationInsights(records)
+                // For now, the above simulation is what populates it initially.
+                // If you want medication insights to ONLY come from real records,
+                // remove the simulation call above and ONLY call it here.
                 calculateRecordTypeStats(records)
+
+                // If chronic conditions were part of the 'MedicalRecord' objects or fetched separately from the repo:
+                // val userConditions = records.firstOrNull()?.chronicConditionsList ?: emptyList() // Example
+                // _chronicConditions.value = userConditions
             }.onFailure { exception ->
                 _errorMessage.value = (_errorMessage.value ?: "") + "\nError fetching medical records: ${exception.message}"
             }
-            _isLoading.value = false // Simplified loading state
+            _isLoading.value = false
         }
     }
+    fun addChronicCondition(condition: String) {
+        if (condition.isNotBlank()) {
+            _chronicConditions.update { currentList ->
+                // Avoid duplicates (case-insensitive check)
+                if (!currentList.any { it.equals(condition, ignoreCase = true) }) {
+                    currentList + condition
+                } else {
+                    currentList // Condition already exists, do nothing
+                }
+            }
+            // Future: viewModelScope.launch { medicalRecordRepository.addChronicConditionForUser(userId, condition) }
+        }
+    }
+
+    fun removeChronicCondition(condition: String) {
+        _chronicConditions.update { currentList ->
+            currentList.filterNot { it.equals(condition, ignoreCase = true) }
+        }
+        // Future: viewModelScope.launch { medicalRecordRepository.removeChronicConditionForUser(userId, condition) }
+    }
+
 
     // --- Statistics Calculation Functions ---
     // Make sure these are INSIDE the class
@@ -215,16 +254,13 @@ class MedicalRecordsViewModel(
     }
 
     private fun calculateMedicationInsights(medicalRecords: List<MedicalRecord>) {
-        val allPrescribedMedsList = medicalRecords
-            .flatMap { it.prescribedMedications }
-
+        val allPrescribedMedsList = medicalRecords.flatMap { it.prescribedMedications }
         _frequentMedications.value = allPrescribedMedsList
             .groupBy { it.name }
             .mapValues { it.value.size }
             .toList()
             .sortedByDescending { it.second }
             .take(5)
-
         _uniqueMedicationsCount.value = allPrescribedMedsList
             .map { it.name }
             .distinct()
@@ -240,7 +276,5 @@ class MedicalRecordsViewModel(
     override fun onCleared() {
         super.onCleared()
         appointmentsListenerReg?.remove()
-        // medicalRecordsListenerReg?.remove()
     }
-
 }

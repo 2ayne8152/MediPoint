@@ -10,23 +10,39 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.isEmpty
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,6 +60,11 @@ fun MedicalRecordScreen(
     val uniqueMedicationsCount by viewModel.uniqueMedicationsCount.collectAsState() // New line
     val typesPerDoctorStats by viewModel.typesPerDoctorStats.collectAsState()
     val statusPerTypeStats by viewModel.statusPerTypeStats.collectAsState()
+
+    val chronicConditions by viewModel.chronicConditions.collectAsState()
+    var showAddConditionDialog by remember { mutableStateOf(false) }
+    var newConditionInput by remember { mutableStateOf("") }
+
 
     val isLoading by viewModel.isLoading.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
@@ -129,6 +150,54 @@ fun MedicalRecordScreen(
                             )
                         }
                     }
+                    item {
+                        StatisticSectionCard(title = "Chronic Conditions & Diagnoses") {
+                            if (chronicConditions.isEmpty()) {
+                                Text("No chronic conditions specified.")
+                            } else {
+                                chronicConditions.forEach { condition ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp), // Added small vertical padding for spacing
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = condition,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            modifier = Modifier.weight(1f) // Allow text to take available space
+                                        )
+                                        IconButton(
+                                            onClick = { viewModel.removeChronicCondition(condition) },
+                                            modifier = Modifier.size(32.dp) // Adjusted size for better touch target
+                                        ) {
+                                            Icon(
+                                                Icons.Filled.Delete,
+                                                contentDescription = "Remove $condition",
+                                                tint = MaterialTheme.colorScheme.error,
+                                                modifier = Modifier.size(18.dp) // Icon visual size
+                                            )
+                                        }
+                                    }
+                                    HorizontalDivider( // Use the M3 HorizontalDivider
+                                        modifier = Modifier.padding(vertical = 4.dp),
+                                        thickness = DividerDefaults.Thickness, // Use DividerDefaults
+                                        color = DividerDefaults.color // Use DividerDefaults
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Button(
+                                onClick = { showAddConditionDialog = true },
+                                modifier = Modifier.align(Alignment.End) // Align button to the end
+                            ) {
+                                Icon(Icons.Filled.Add, contentDescription = "Add Condition", modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.padding(start = 4.dp)) // Spacing between icon and text
+                                Text("Add Condition")
+                            }
+                        }
+                    }
 
 
                     // Section 3: Combined Statistics
@@ -172,7 +241,48 @@ fun MedicalRecordScreen(
             }
         }
     }
+    if (showAddConditionDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showAddConditionDialog = false
+                newConditionInput = "" // Reset input on dismiss
+            },
+            title = { Text("Add Chronic Condition") },
+            text = {
+                OutlinedTextField(
+                    value = newConditionInput,
+                    onValueChange = { newConditionInput = it },
+                    label = { Text("Condition name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.addChronicCondition(newConditionInput.trim()) // Trim whitespace
+                        showAddConditionDialog = false
+                        newConditionInput = "" // Reset input after adding
+                    },
+                    enabled = newConditionInput.isNotBlank() // Disable button if input is blank
+                ) {
+                    Text("Add")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showAddConditionDialog = false
+                        newConditionInput = "" // Reset input on cancel
+                    }
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
+
 
 @Composable
 fun StatisticSectionCard(
@@ -213,6 +323,10 @@ fun StatisticRow(label: String, value: String) {
             fontWeight = FontWeight.SemiBold
         )
     }
-    Divider(modifier = Modifier.padding(vertical = 4.dp))
+    HorizontalDivider(
+        modifier = Modifier.padding(vertical = 4.dp),
+        thickness = DividerDefaults.Thickness,
+        color = DividerDefaults.color
+    )
 }
 

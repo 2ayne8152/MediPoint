@@ -498,13 +498,8 @@ fun MedicalInfoCard(
             // Emergency Contact - combined name and phone
             val emergencyContact = if (medicalInfo.emergencyContactName != null && medicalInfo.emergencyContactPhone != null) {
                 "${medicalInfo.emergencyContactName} - ${medicalInfo.emergencyContactPhone}"
-            } else if (medicalInfo.emergencyContactName != null) {
-                medicalInfo.emergencyContactName
-            } else if (medicalInfo.emergencyContactPhone != null) {
-                medicalInfo.emergencyContactPhone
-            } else {
-                "Not specified"
-            }
+            } else medicalInfo.emergencyContactName
+                ?: (medicalInfo.emergencyContactPhone ?: "Not specified")
 
             MedicalInfoItem(
                 title = "Emergency Contact",
