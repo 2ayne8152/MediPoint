@@ -16,7 +16,6 @@ import com.example.medipoint.Repository.AppointmentRepository
 import com.example.medipoint.Repository.MedicalRecordRepository
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.ListenerRegistration
-import com.google.type.Date
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +23,6 @@ import kotlinx.coroutines.launch
 // import kotlinx.coroutines.flow.collectLatest // Not directly used in the changed parts but fine to keep
 // import kotlinx.coroutines.launch // Not directly used in the changed parts but fine to keep
 import kotlin.random.Random
-import com.google.firebase.Timestamp
 
 class MedicalRecordsViewModel(
     // Inject both repositories
@@ -73,7 +71,7 @@ class MedicalRecordsViewModel(
 
     private var appointmentsListenerReg: ListenerRegistration? = null
 
-    private val predefinedMockMedications = listOf(
+    private val mockMedicationsList = listOf(
         PrescribedMedication("Amoxicillin", "250mg", "Thrice daily"),
         PrescribedMedication("Ibuprofen", "400mg", "As needed for pain"),
         PrescribedMedication("Lisinopril", "10mg", "Once daily"),
@@ -84,10 +82,6 @@ class MedicalRecordsViewModel(
         PrescribedMedication("Ventolin Inhaler", "2 puffs", "As needed for wheezing"),
         PrescribedMedication("Losartan", "50mg", "Once daily")
     )
-
-    private val mockRecordTypes = listOf("General Check-up", "Follow-up", "Consultation")
-    private val mockDiagnoses = listOf("Common Cold", "Hypertension", "Type 2 Diabetes", "Allergic Rhinitis", "Bronchitis")
-
 
     init {
         loadAllDataAndProcess()
@@ -102,29 +96,6 @@ class MedicalRecordsViewModel(
         _uniqueMedicationsCount.value = 0
         _recordTypeStats.value = emptyMap()
     }
-    private fun generateSimulatedMedicalRecords(userId: String, count: Int): List<MedicalRecord> {
-        val records = mutableListOf<MedicalRecord>()
-        repeat(count) {
-            val numberOfMeds = Random.nextInt(1, 4)
-            // Now it can access predefinedMockMedications because it's a member of the same class
-            val selectedMeds = predefinedMockMedications.shuffled().take(numberOfMeds)
-
-            records.add(
-                MedicalRecord(
-                    userId = userId,
-                    recordTitle = "Simulated Record #${it + 1}",
-                    recordType = mockRecordTypes.random(),
-                    diagnosis = mockDiagnoses.random(),
-                    prescribedMedications = selectedMeds,
-                    reasonForVisit = "Simulated reason",
-                    treatmentPlan = "Simulated plan",
-                    issuingOrganization = "MediPoint Simulation Clinic"
-                )
-            )
-        }
-        return records
-    }
-
 
     private fun loadAllDataAndProcess() {
         val userId = FirebaseAuth.getInstance().currentUser?.uid
@@ -155,12 +126,6 @@ class MedicalRecordsViewModel(
                 _isLoading.value = false
             }
         )
-
-        val simulatedMedicalRecordsForMeds = generateSimulatedMedicalRecords(userId, 15) // Generate e.g., 15 simulated records
-        // These are NOT saved to the DAO. They exist only in memory for this ViewModel instance.
-        calculateMedicationInsights(simulatedMedicalRecordsForMeds)
-
-
 
         viewModelScope.launch {
             val medicalRecordsResult = medicalRecordRepository.getMedicalRecords(userId)
