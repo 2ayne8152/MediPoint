@@ -259,8 +259,34 @@ private fun showAndroidDatePicker(
         calendar.get(Calendar.DAY_OF_MONTH)
     )
 
-    // Prevent selecting past dates
-    datePickerDialog.datePicker.minDate = System.currentTimeMillis() - 1000
+    // Prevent selecting past dates and allow only dates 2 days after today
+    val twoDaysLater = Calendar.getInstance().apply {
+        add(Calendar.DAY_OF_YEAR, 2)
+    }
+    datePickerDialog.datePicker.minDate = twoDaysLater.timeInMillis
 
     datePickerDialog.show()
 }
+
+// Use for testing
+//private fun showAndroidDatePicker(
+//    context: Context,
+//    calendar: Calendar,
+//    onDateSelected: (String) -> Unit
+//) {
+//    val datePickerDialog = DatePickerDialog(
+//        context,
+//        { _, year, month, dayOfMonth ->
+//            onDateSelected("$dayOfMonth/${month + 1}/$year")
+//        },
+//        calendar.get(Calendar.YEAR),
+//        calendar.get(Calendar.MONTH),
+//        calendar.get(Calendar.DAY_OF_MONTH)
+//    )
+//
+//    // Prevent selecting past dates
+//    datePickerDialog.datePicker.minDate = System.currentTimeMillis() - 1000
+//
+//    datePickerDialog.show()
+//}
+
