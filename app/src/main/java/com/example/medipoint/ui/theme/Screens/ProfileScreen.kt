@@ -65,7 +65,59 @@ import com.example.medipoint.Data.MedicalInfoEntity
 import com.example.medipoint.Viewmodels.ProfileViewModel
 import com.example.medipoint.Viewmodels.UserProfile
 import kotlinx.coroutines.launch
+import com.example.medipoint.utils.isValidPhoneNumber
 
+
+@Composable
+fun ValidatedPhoneNumberField(
+    initialValue: String = "",
+    onPhoneNumberChanged: (String, Boolean) -> Unit
+) {
+    var phoneNumber by remember(initialValue) { mutableStateOf(initialValue) }
+    var phoneNumberError by remember { mutableStateOf<String?>(null) }
+
+    Column {
+        OutlinedTextField(
+            value = phoneNumber,
+            onValueChange = { newValue ->
+                val filteredValue = newValue.filter { it.isDigit() }
+                val truncatedValue = if (filteredValue.length > 11) {
+                    filteredValue.substring(0, 11)
+                } else {
+                    filteredValue
+                }
+                phoneNumber = truncatedValue
+
+                // CALLING THE IMPORTED FUNCTION HERE
+                val (isValid, errorMessage) = isValidPhoneNumber(truncatedValue) // From your utils package
+
+                phoneNumberError = if (truncatedValue.isEmpty()) {
+                    null
+                } else {
+                    errorMessage
+                }
+                onPhoneNumberChanged(truncatedValue, isValid && truncatedValue.isNotEmpty())
+            },
+            label = { Text("Phone Number") },
+            placeholder = { Text("Enter 10 or 11 digits") },
+            singleLine = true,
+            isError = phoneNumberError != null && phoneNumber.isNotEmpty(),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Phone
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        if (phoneNumberError != null && phoneNumber.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = phoneNumberError!!,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
 @Composable
 fun ProfileScreen(
     onSignOut: () -> Unit,
@@ -733,37 +785,45 @@ fun EditProfileDialog(
     onDismissRequest: () -> Unit,
     onApplyChanges: (newPhoneNumber: String) -> Unit
 ) {
-    var phoneNumberInput by remember { mutableStateOf(currentPhoneNumber) }
-    val focusManager = LocalFocusManager.current
+    // State to hold the current phone number being input in the validated field
+    var phoneNumberInput by remember(currentPhoneNumber) { mutableStateOf(currentPhoneNumber) }
+
+    // State to track if the current phone number input is valid
+    // Initialize based on the currentPhoneNumber
+    var isPhoneNumberValid by remember(currentPhoneNumber) {
+        mutableStateOf(isValidPhoneNumber(currentPhoneNumber).first && currentPhoneNumber.isNotEmpty())
+    }
+    // val focusManager = LocalFocusManager.current // Not directly needed here anymore
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = { Text("Edit Profile") },
         text = {
             Column {
-                Text("Update your phone number:")
+                Text("Update your phone number:") // Or any instruction text you prefer
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = phoneNumberInput,
-                    onValueChange = { phoneNumberInput = it },
-                    label = { Text("Phone Number") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        keyboardType = KeyboardType.Phone,
-                        imeAction = ImeAction.Done
-                    ),
-                    keyboardActions = KeyboardActions(onDone = {
-                        focusManager.clearFocus()
-                    }),
-                    modifier = Modifier.fillMaxWidth()
+
+                // --- REPLACE OutlinedTextField WITH ValidatedPhoneNumberField ---
+                ValidatedPhoneNumberField(
+                    initialValue = phoneNumberInput, // Pass the current input state
+                    onPhoneNumberChanged = { number, isValid ->
+                        phoneNumberInput = number     // Update the local input state
+                        isPhoneNumberValid = isValid  // Update the validity state
+                    }
                 )
+                // --- END OF REPLACEMENT ---
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    onApplyChanges(phoneNumberInput)
-                }
+                    // It's good practice to double-check validity here,
+                    // though the button's enabled state should prevent invalid submission.
+                    if (isPhoneNumberValid) {
+                        onApplyChanges(phoneNumberInput)
+                    }
+                },
+                enabled = isPhoneNumberValid // Enable the button ONLY if the phone number is valid
             ) {
                 Text("Apply")
             }
