@@ -1,5 +1,7 @@
 package com.example.medipoint.ui.theme.Screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -49,6 +52,7 @@ fun HomeScreen(
     val appointments by bookingViewModel.appointments.collectAsState()
     val userProfileState by profileViewModel.userProfile.collectAsState()
     val currentUserDisplayName = userProfileState?.displayName?.takeIf { it.isNotBlank() } ?: "User"
+    val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         bookingViewModel.startAppointmentsListener()
@@ -109,8 +113,16 @@ fun HomeScreen(
                     imageVector = Icons.Filled.Place,
                     title = stringResource(R.string.find_my_doctor),
                     subtitle = stringResource(R.string.get_directions),
-                    modifier = Modifier.fillMaxWidth(),
-                    onButtonClicked = {}
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 6.dp),
+                    onButtonClicked = {
+                        val address = "Tunku+Abdul+Rahman+University,+Penang"
+                        val gmmIntentUri = Uri.parse("geo:0,0?q=$address")
+                        val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+                        mapIntent.setPackage("com.google.android.apps.maps")
+                        context.startActivity(mapIntent)
+                    }
                 )
             }
         }

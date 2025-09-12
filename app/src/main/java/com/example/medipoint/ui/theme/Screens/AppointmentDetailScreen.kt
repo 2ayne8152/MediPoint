@@ -3,6 +3,9 @@
 package com.example.medipoint.ui.theme.Screens
 
 import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -160,7 +163,7 @@ fun AppointmentDetailScreen(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                DirectionButton("Open Google Map")
+                DirectionButton("Open Google Map", context)
             }
         }
 
@@ -299,9 +302,15 @@ fun CheckInCard(
 }
 
 @Composable
-fun DirectionButton(label: String) {
+fun DirectionButton(label: String, context: Context) {
     Button(
-        onClick = { /* Handle directions */ },
+        onClick = {
+            val address = "Tunku+Abdul+Rahman+University,+Penang"
+            val gmmIntentUri = Uri.parse("geo:0,0?q=$address")
+            val mapIntent = Intent(Intent.ACTION_VIEW, gmmIntentUri)
+            mapIntent.setPackage("com.google.android.apps.maps")
+            context.startActivity(mapIntent)
+        },
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
