@@ -10,4 +10,8 @@ interface AppointmentDao {
         onDataChange: (List<Appointment>) -> Unit,
         onError: (Exception) -> Unit
     ): ListenerRegistration
+
+    // New methods
+    suspend fun updateAppointmentStatus(appointmentId: String, status: String): Result<Unit>
+    suspend fun cancelAppointment(appointmentId: String): Result<Unit>
 }

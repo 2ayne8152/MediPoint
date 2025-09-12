@@ -240,14 +240,23 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
     }
 }
 
-private fun showAndroidDatePicker(context: Context, calendar: Calendar, onDateSelected: (String) -> Unit) {
-    DatePickerDialog(
+private fun showAndroidDatePicker(
+    context: Context,
+    calendar: Calendar,
+    onDateSelected: (String) -> Unit
+) {
+    val datePickerDialog = DatePickerDialog(
         context,
-        { _, year, month, day ->
-            onDateSelected("$day/${month + 1}/$year")
+        { _, year, month, dayOfMonth ->
+            onDateSelected("$dayOfMonth/${month + 1}/$year")
         },
         calendar.get(Calendar.YEAR),
         calendar.get(Calendar.MONTH),
         calendar.get(Calendar.DAY_OF_MONTH)
-    ).show()
+    )
+
+    // Prevent selecting past dates
+    datePickerDialog.datePicker.minDate = System.currentTimeMillis() - 1000
+
+    datePickerDialog.show()
 }
