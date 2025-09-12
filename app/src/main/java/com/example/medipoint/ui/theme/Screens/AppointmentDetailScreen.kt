@@ -62,6 +62,8 @@ fun AppointmentDetailScreen(
     val appointment by viewModel.appointment.collectAsState()
     val appointmentDateTime by viewModel.appointmentDateTime.collectAsState()
 
+    val context = LocalContext.current
+
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
 
     LaunchedEffect(appointmentId) {
@@ -205,7 +207,23 @@ fun AppointmentDetailScreen(
                 )
             }
         }
-
+        if (checkInRecord?.checkedIn != true && appointment?.status == "Confirmed") {
+            Button(
+                onClick = {
+                    viewModel.cancelAppointment(appointmentId)
+                    Toast.makeText(context, "Appointment cancelled!", Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Red
+                )
+            ) {
+                Text("Cancel Appointment")
+            }
+        }
     }
 }
 
