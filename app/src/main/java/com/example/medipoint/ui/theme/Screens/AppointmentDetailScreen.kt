@@ -76,6 +76,7 @@ fun AppointmentDetailScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // ✅ Appointment Card (Dynamic from Firestore)
         Card(
             shape = RoundedCornerShape(16.dp),
             modifier = Modifier

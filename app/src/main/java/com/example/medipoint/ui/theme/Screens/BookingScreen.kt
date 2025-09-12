@@ -37,7 +37,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.medipoint.Repository.AppointmentResult
 import com.example.medipoint.Viewmodels.BookingViewModel
 import java.util.Calendar
 
@@ -68,15 +67,19 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
     val saveStatus by viewModel.saveStatus.collectAsState()
 
     LaunchedEffect(saveStatus) {
-        when (val result = saveStatus) {
-            is AppointmentResult.Success -> {
-                Toast.makeText(context, "Appointment booked successfully!", Toast.LENGTH_SHORT).show()
-                // clear form
+        saveStatus?.let { result ->
+            result.onSuccess {
+                Toast.makeText(context, "Appointment requested successfully!", Toast.LENGTH_SHORT).show()
+
+                selectedDoctor = ""
+                appointmentType = ""
+                selectedDate = ""
+                preferredTime = ""
+                notes = ""
             }
-            is AppointmentResult.Error -> {
-                Toast.makeText(context, "Error: ${result.message}", Toast.LENGTH_SHORT).show()
+            result.onFailure { e ->
+                Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
-            null -> {}
         }
     }
 
@@ -237,12 +240,8 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
     }
 }
 
-private fun showAndroidDatePicker(
-    context: Context,
-    calendar: Calendar,
-    onDateSelected: (String) -> Unit
-) {
-    val datePicker = DatePickerDialog(
+private fun showAndroidDatePicker(context: Context, calendar: Calendar, onDateSelected: (String) -> Unit) {
+    DatePickerDialog(
         context,
         { _, year, month, day ->
             onDateSelected("$day/${month + 1}/$year")
@@ -250,10 +249,5 @@ private fun showAndroidDatePicker(
         calendar.get(Calendar.YEAR),
         calendar.get(Calendar.MONTH),
         calendar.get(Calendar.DAY_OF_MONTH)
-    )
-
-    // Prevent selecting past dates
-    datePicker.datePicker.minDate = System.currentTimeMillis() - 1000
-
-    datePicker.show()
+    ).show()
 }

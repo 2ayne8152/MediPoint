@@ -71,7 +71,6 @@ class MedicalInfoRepository(
         }
     }
 
-
     suspend fun clearLocalMedicalInfo(userId: String) {
         withContext(Dispatchers.IO) {
             medicalInfoDao.deleteMedicalInfoByUserId(userId)
