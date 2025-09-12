@@ -39,6 +39,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.medipoint.ui.theme.Screens.AllAppointmentsScreen
 import com.example.medipoint.ui.theme.Screens.AppointmentDetailScreen
 import com.example.medipoint.ui.theme.Screens.BookingScreen
 import com.example.medipoint.ui.theme.Screens.HomeScreen
@@ -46,7 +47,6 @@ import com.example.medipoint.ui.theme.Screens.LoginScreen
 import com.example.medipoint.ui.theme.Screens.MedicalRecordScreen
 import com.example.medipoint.ui.theme.Screens.ProfileScreen
 import com.example.medipoint.ui.theme.Screens.RegistrationScreen
-import com.example.medipoint.ui.theme.Screens.AllAppointmentsScreen
 import com.example.medipoint.ui.theme.Viewmodels.AuthViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
@@ -169,7 +169,10 @@ fun MainAppContent(onSignOut: () -> Unit) {
                 arguments = listOf(navArgument("appointmentId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val appointmentId = backStackEntry.arguments?.getString("appointmentId") ?: ""
-                AppointmentDetailScreen(appointmentId = appointmentId)
+                AppointmentDetailScreen(
+                    appointmentId = appointmentId,
+                    navController = navController,
+                )
             }
             composable(route = MedipointScreens.ProfileScreen.route) {
                 ProfileScreen(onSignOut = onSignOut,

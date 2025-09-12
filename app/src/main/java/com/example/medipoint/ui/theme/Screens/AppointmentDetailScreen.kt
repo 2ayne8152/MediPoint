@@ -44,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.example.medipoint.Data.CheckInRecord
 import com.example.medipoint.R
 import com.example.medipoint.Viewmodels.CheckInViewModel
@@ -56,7 +57,8 @@ import com.google.accompanist.permissions.rememberPermissionState
 @Composable
 fun AppointmentDetailScreen(
     appointmentId: String,
-    viewModel: CheckInViewModel = viewModel()
+    viewModel: CheckInViewModel = viewModel(),
+    navController: NavController
 ) {
     val checkInRecord by viewModel.checkInRecord.collectAsState()
     val appointment by viewModel.appointment.collectAsState()
@@ -207,12 +209,13 @@ fun AppointmentDetailScreen(
                 )
             }
         }
-        if (checkInRecord?.checkedIn != true && appointment?.status == "Confirmed") {
+        if (checkInRecord?.checkedIn != true && appointment?.status == "Scheduled") {
             Button(
                 onClick = {
                     viewModel.cancelAppointment(appointmentId)
                     Toast.makeText(context, "Appointment cancelled!", Toast.LENGTH_SHORT).show()
-                },
+                    navController.popBackStack(route = "home", inclusive = false)
+                          },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 4.dp),
