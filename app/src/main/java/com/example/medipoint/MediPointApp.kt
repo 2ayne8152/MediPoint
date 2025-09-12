@@ -6,7 +6,6 @@
 
 package com.example.medipoint
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -47,6 +46,7 @@ import com.example.medipoint.ui.theme.Screens.LoginScreen
 import com.example.medipoint.ui.theme.Screens.MedicalRecordScreen
 import com.example.medipoint.ui.theme.Screens.ProfileScreen
 import com.example.medipoint.ui.theme.Screens.RegistrationScreen
+import com.example.medipoint.ui.theme.Screens.SettingsScreen
 import com.example.medipoint.ui.theme.Viewmodels.AuthViewModel
 import com.google.firebase.Firebase
 import com.google.firebase.auth.auth
@@ -59,7 +59,8 @@ enum class MedipointScreens(val route: String) {
     LoginScreen("login"),
     RegistrationScreen("registration"),
     MedicalRecordsScreen("medicalRecords"),
-    AllAppointmentsScreen("allAppointments");
+    AllAppointmentsScreen("allAppointments"),
+    SettingsScreen("settings");
 
     companion object {
         fun appointmentDetail(appointmentId: String): String {
@@ -73,6 +74,7 @@ fun MediPointApp() {
     var currentScreen by remember { mutableStateOf(MedipointScreens.LoginScreen) }
     var isLoggedIn by remember { mutableStateOf(Firebase.auth.currentUser != null) }
     val authViewModel: AuthViewModel = viewModel()
+    var isDarkMode by remember { mutableStateOf(false) }
 
     if (isLoggedIn) {
         MainAppContent(
@@ -80,7 +82,9 @@ fun MediPointApp() {
                 Firebase.auth.signOut()
                 isLoggedIn = false
                 currentScreen = MedipointScreens.LoginScreen
-            }
+            },
+            isDarkMode = isDarkMode,
+            onToggleDarkMode = { isDarkMode = it }
         )
     } else {
         when (currentScreen) {
@@ -94,9 +98,7 @@ fun MediPointApp() {
             MedipointScreens.RegistrationScreen -> {
                 RegistrationScreen(
                     authViewModel = authViewModel,
-                    onRegistrationSuccess = {
-                        currentScreen = MedipointScreens.LoginScreen
-                    },
+                    onRegistrationSuccess = { currentScreen = MedipointScreens.LoginScreen },
                     onBackToLogin = { currentScreen = MedipointScreens.LoginScreen }
                 )
             }
@@ -112,30 +114,33 @@ fun MediPointApp() {
 }
 
 @Composable
-fun MainAppContent(onSignOut: () -> Unit) {
+fun MainAppContent(
+    onSignOut: () -> Unit,
+    isDarkMode: Boolean,
+    onToggleDarkMode: (Boolean) -> Unit
+) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
 
-    // Determine if back button should show
     val showBackButton = currentRoute == MedipointScreens.AppointmentDetailScreen.route ||
-            currentRoute == MedipointScreens.AllAppointmentsScreen.route
+            currentRoute == MedipointScreens.AllAppointmentsScreen.route ||
+            currentRoute == MedipointScreens.SettingsScreen.route
 
     Scaffold(
         topBar = {
             if (showBackButton) {
                 TopAppBar(
                     title = {
-                        Column {
-                            Text(
-                                text = when (currentRoute) {
-                                    MedipointScreens.AppointmentDetailScreen.route -> "Appointment Details"
-                                    MedipointScreens.AllAppointmentsScreen.route -> "All Appointments"
-                                    else -> ""
-                                },
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                        }
+                        Text(
+                            text = when (currentRoute) {
+                                MedipointScreens.AppointmentDetailScreen.route -> "Appointment Details"
+                                MedipointScreens.AllAppointmentsScreen.route -> "All Appointments"
+                                MedipointScreens.SettingsScreen.route -> "Settings"
+                                else -> ""
+                            },
+                            style = MaterialTheme.typography.titleMedium
+                        )
                     },
                     navigationIcon = {
                         IconButton(onClick = { navController.popBackStack() }) {
@@ -160,18 +165,16 @@ fun MainAppContent(onSignOut: () -> Unit) {
             startDestination = MedipointScreens.HomeScreen.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(route = MedipointScreens.HomeScreen.route) {
+            composable(MedipointScreens.HomeScreen.route) {
                 HomeScreen(
                     onBookAppointmentClick = { navController.navigate(MedipointScreens.BookingScreen.route) },
                     onDetailClick = { appointmentId -> navController.navigate(MedipointScreens.appointmentDetail(appointmentId)) },
                     onViewAllClick = { navController.navigate(MedipointScreens.AllAppointmentsScreen.route) }
                 )
             }
-            composable(route = MedipointScreens.BookingScreen.route) {
-                BookingScreen()
-            }
+            composable(MedipointScreens.BookingScreen.route) { BookingScreen() }
             composable(
-                route = MedipointScreens.AppointmentDetailScreen.route,
+                MedipointScreens.AppointmentDetailScreen.route,
                 arguments = listOf(navArgument("appointmentId") { type = NavType.StringType })
             ) { backStackEntry ->
                 val appointmentId = backStackEntry.arguments?.getString("appointmentId") ?: ""
@@ -180,16 +183,25 @@ fun MainAppContent(onSignOut: () -> Unit) {
                     navController = navController
                 )
             }
-            composable(route = MedipointScreens.ProfileScreen.route) {
-                ProfileScreen(onSignOut = onSignOut,
-                    onNavigateToMedicalRecords = { navController.navigate(MedipointScreens.MedicalRecordsScreen.route) })
+            composable(MedipointScreens.ProfileScreen.route) {
+                ProfileScreen(
+                    onSignOut = onSignOut,
+                    onNavigateToMedicalRecords = { navController.navigate(MedipointScreens.MedicalRecordsScreen.route) },
+                    onNavigateToSettings = { navController.navigate(MedipointScreens.SettingsScreen.route) }
+                )
             }
-            composable(route = MedipointScreens.MedicalRecordsScreen.route) {
+            composable(MedipointScreens.MedicalRecordsScreen.route) {
                 MedicalRecordScreen(viewModel())
             }
-            composable(route = MedipointScreens.AllAppointmentsScreen.route) {
+            composable(MedipointScreens.AllAppointmentsScreen.route) {
                 AllAppointmentsScreen(
                     onDetailClick = { appointmentId -> navController.navigate(MedipointScreens.appointmentDetail(appointmentId)) }
+                )
+            }
+            composable(MedipointScreens.SettingsScreen.route) {
+                SettingsScreen(
+                    isDarkMode = remember { mutableStateOf(isDarkMode) },
+                    onToggleTheme = onToggleDarkMode
                 )
             }
         }

@@ -30,7 +30,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -47,12 +46,10 @@ fun HomeScreen(
     bookingViewModel: BookingViewModel = viewModel(),
     profileViewModel: ProfileViewModel = viewModel()
 ) {
-    // Collect appointments from the ViewModel
     val appointments by bookingViewModel.appointments.collectAsState()
     val userProfileState by profileViewModel.userProfile.collectAsState()
     val currentUserDisplayName = userProfileState?.displayName?.takeIf { it.isNotBlank() } ?: "User"
 
-    // Start listening once when the screen enters
     LaunchedEffect(Unit) {
         bookingViewModel.startAppointmentsListener()
     }
@@ -66,12 +63,13 @@ fun HomeScreen(
         // Greeting
         Text(
             text = "Good morning, $currentUserDisplayName",
-            style = MaterialTheme.typography.headlineSmall
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onBackground
         )
         Text(
             text = "You have ${appointments.count { it.status == "Scheduled" || it.status == "Confirmed" }} upcoming appointment${if (appointments.count { it.status == "Scheduled" || it.status == "Confirmed" } == 1) "" else "s"}",
             style = MaterialTheme.typography.bodyMedium,
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp)
         )
 
@@ -79,6 +77,7 @@ fun HomeScreen(
         Text(
             "Quick Actions",
             style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(top = 20.dp)
         )
         Card(
@@ -87,11 +86,11 @@ fun HomeScreen(
                 .fillMaxWidth()
                 .border(
                     width = 1.dp,
-                    color = Color.LightGray,
+                    color = MaterialTheme.colorScheme.outline,
                     shape = RoundedCornerShape(12.dp)
                 ),
             elevation = CardDefaults.cardElevation(4.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(
                 modifier = Modifier
@@ -103,18 +102,14 @@ fun HomeScreen(
                     imageVector = Icons.Filled.Add,
                     title = stringResource(R.string.book_appointment),
                     subtitle = stringResource(R.string.schedule_a_new_visit),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 6.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     onButtonClicked = onBookAppointmentClick
                 )
                 ActionButton(
                     imageVector = Icons.Filled.Place,
                     title = stringResource(R.string.find_my_doctor),
                     subtitle = stringResource(R.string.get_directions),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 6.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     onButtonClicked = {}
                 )
             }
@@ -128,28 +123,23 @@ fun HomeScreen(
             Text(
                 "Upcoming Appointments",
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding()
+                color = MaterialTheme.colorScheme.onBackground
             )
-            Spacer(
-                modifier = Modifier.padding(6.dp)
-            )
+            Spacer(modifier = Modifier.width(6.dp))
             Text(
                 text = "View All",
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.Blue,
-                modifier = Modifier.clickable {
-                    onViewAllClick()
-                }
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.clickable { onViewAllClick() }
             )
         }
 
-        // Filter only Scheduled or Confirmed appointments
         val upcomingAppointments = appointments.filter { it.status == "Scheduled" || it.status == "Confirmed" }
 
         if (upcomingAppointments.isEmpty()) {
             Text(
                 "No upcoming appointments.",
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 8.dp)
             )
@@ -177,35 +167,29 @@ fun ActionButton(
     onButtonClicked: () -> Unit
 ) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .border(
                 width = 1.dp,
-                color = Color.LightGray,
+                color = MaterialTheme.colorScheme.outline,
                 shape = RoundedCornerShape(12.dp)
             )
-            .clickable(
-                onClick = onButtonClicked
-            ),
+            .clickable(onClick = onButtonClicked),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .padding(vertical = 4.dp)
-                .fillMaxWidth()
+            modifier = Modifier.padding(vertical = 4.dp).fillMaxWidth()
         ) {
-            Spacer(
-                modifier = Modifier.width(16.dp)
-            )
+            Spacer(modifier = Modifier.width(16.dp))
             Icon(
                 imageVector = imageVector,
-                tint = Color(0xFF0A0A1A),
+                tint = MaterialTheme.colorScheme.primary,
                 contentDescription = null
             )
             Column(Modifier.padding(16.dp)) {
-                Text(title, style = MaterialTheme.typography.bodyLarge)
-                Text(subtitle, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             }
         }
     }
@@ -225,30 +209,30 @@ fun AppointmentCard(
             .fillMaxWidth()
             .border(
                 width = 1.dp,
-                color = Color.LightGray,
+                color = MaterialTheme.colorScheme.outline,
                 shape = RoundedCornerShape(12.dp)
             ),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(doctor, style = MaterialTheme.typography.bodyLarge)
-                Text(specialty, color = Color.Gray, style = MaterialTheme.typography.bodySmall)
+                Text(doctor, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(specialty, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                 Text(
                     "$date • $time",
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp)
                 )
             }
             Button(
                 onClick = onDetailClick,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.Black,
-                    contentColor = Color.White
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
                 )
             ) {
                 Text("Details")

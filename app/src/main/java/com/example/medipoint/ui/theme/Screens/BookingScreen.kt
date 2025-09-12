@@ -20,6 +20,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
@@ -231,11 +232,14 @@ fun BookingScreen(viewModel: BookingViewModel = viewModel()) {
                 .fillMaxWidth()
                 .height(50.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (isFormValid) Color(0xFF00001A) else Color.Gray
+                containerColor = if (isFormValid) MaterialTheme.colorScheme.primary  else Color.Gray
             ),
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text("Request Appointment", color = Color.White)
+            Text(
+                "Request Appointment",
+                color = if (isFormValid) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }

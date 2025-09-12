@@ -5,7 +5,6 @@ package com.example.medipoint.ui.theme.Screens
 import android.Manifest
 import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -37,7 +36,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -53,7 +51,7 @@ import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 
-@OptIn(ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun AppointmentDetailScreen(
     appointmentId: String,
@@ -63,7 +61,6 @@ fun AppointmentDetailScreen(
     val checkInRecord by viewModel.checkInRecord.collectAsState()
     val appointment by viewModel.appointment.collectAsState()
     val appointmentDateTime by viewModel.appointmentDateTime.collectAsState()
-
     val context = LocalContext.current
 
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
@@ -80,52 +77,52 @@ fun AppointmentDetailScreen(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+        // Appointment Details Card
         Card(
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp)),
+            modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(4.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
-            Column(
-                modifier = Modifier
-                    .padding(16.dp)
-                    .fillMaxWidth()
-            ) {
+            Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     appointment?.doctorName ?: "Loading...",
-                    style = MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     appointment?.appointmentType ?: "",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 AppointmentInfoRow(Icons.Default.DateRange, "Date:", appointment?.date ?: "")
-                AppointmentInfoRow(Icons.Filled.Settings, "Time:", appointment?.time ?: "")
-                AppointmentInfoRow(Icons.Filled.Phone, "Contact Us: ", "012-345678")
+                AppointmentInfoRow(Icons.Default.Settings, "Time:", appointment?.time ?: "")
+                AppointmentInfoRow(Icons.Default.Phone, "Contact Us:", "012-345678")
                 Spacer(modifier = Modifier.height(8.dp))
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .background(
-                            if (appointment?.status == "Confirmed") Color(0xFF00C853) else Color.Gray,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                Row (
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    Text(
-                        appointment?.status ?: "",
-                        color = Color.White,
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                if (appointment?.status == "Confirmed") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            appointment?.status ?: "",
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
             }
         }
 
-        // ✅ Check-in Card (Dynamic window)
+        // Check-In Card
         CheckInCard(
             checkInRecord = checkInRecord ?: CheckInRecord(),
             appointmentId = appointmentId,
@@ -133,98 +130,78 @@ fun AppointmentDetailScreen(
             appointmentDateTime = appointmentDateTime
         )
 
-        // Location & Directions Card (unchanged)
+        // Location & Directions Card
         Card(
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp)),
+            modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(4.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    stringResource(R.string.location_directions),
-                    style = MaterialTheme.typography.titleMedium
+                    "Location & Directions",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp)),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
-                    )
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                 ) {
-                    Row {
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp)
-                        ) {
-                            Text("Main Building", style = MaterialTheme.typography.bodyLarge)
-                            Text(
-                                "2nd Floor\nRoom 201",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
-                            )
-                        }
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text("Main Building", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            "2nd Floor\nRoom 201",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = stringResource(R.string.get_directions),
-                    style = MaterialTheme.typography.titleMedium
-                )
-                Spacer(modifier = Modifier.height(8.dp))
                 DirectionButton("Open Google Map")
             }
         }
 
-        // Preparation Tips (unchanged)
+        // Preparation Tips Card
         Card(
             shape = RoundedCornerShape(16.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, Color.LightGray, RoundedCornerShape(12.dp)),
+            modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.cardElevation(4.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
-            Column {
+            Column(modifier = Modifier.padding(16.dp)) {
                 Text(
                     "Preparation Tips",
                     style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(16.dp)
+                    color = MaterialTheme.colorScheme.onSurface
                 )
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    "• Arrive 15 minutes early for check-in\n\n" +
-                            "• Bring your insurance card and ID\n\n" +
-                            "• List of current medications\n\n" +
+                    "• Arrive 15 minutes early for check-in\n" +
+                            "• Bring your insurance card and ID\n" +
+                            "• List of current medications\n" +
                             "• Any questions or concerns to discuss",
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(16.dp)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
+
+        // Cancel Appointment Button
         if (checkInRecord?.checkedIn != true && appointment?.status == "Scheduled") {
             Button(
                 onClick = {
                     viewModel.cancelAppointment(appointmentId)
                     Toast.makeText(context, "Appointment cancelled!", Toast.LENGTH_SHORT).show()
                     navController.popBackStack(route = "home", inclusive = false)
-                          },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
+                },
+                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.Red
-                )
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
-                Text("Cancel Appointment")
+                Text("Cancel Appointment", color = MaterialTheme.colorScheme.onError)
             }
         }
     }
@@ -236,7 +213,7 @@ fun AppointmentInfoRow(icon: ImageVector, text1: String, text2: String) {
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(vertical = 4.dp)
     ) {
-        Icon(icon, contentDescription = null, tint = Color(0xFF0A0A1A))
+        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         Spacer(modifier = Modifier.width(8.dp))
         Text( text = "$text1 $text2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
     }
@@ -262,7 +239,7 @@ fun CheckInCard(
         shape = RoundedCornerShape(16.dp),
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(4.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -271,12 +248,17 @@ fun CheckInCard(
             Text(
                 text = stringResource(R.string.check_in),
                 style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.Start)
             )
             Spacer(modifier = Modifier.height(12.dp))
 
             if (checkInRecord.checkedIn) {
-                Text("Checked in successfully!")
+                Text(
+                    "Checked in successfully!",
+                    color = MaterialTheme.colorScheme.primary,
+                    style = MaterialTheme.typography.bodyMedium
+                )
 
                 LaunchedEffect(Unit) {
                     Toast.makeText(context, "Checked in successfully!", Toast.LENGTH_SHORT).show()
@@ -295,7 +277,10 @@ fun CheckInCard(
                         .fillMaxWidth()
                         .padding(vertical = 4.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 ) {
                     Text("Tap to Check In")
                 }
@@ -303,13 +288,12 @@ fun CheckInCard(
                 if (!checkInAvailable) {
                     Text(
                         text = "Check-in opens 30 minutes before your appointment",
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
             }
-
         }
     }
 }
@@ -323,9 +307,9 @@ fun DirectionButton(label: String) {
             .padding(vertical = 4.dp),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color.Black
+            containerColor = MaterialTheme.colorScheme.primary
         )
     ) {
-        Text(label)
+        Text(label, color = MaterialTheme.colorScheme.onPrimary)
     }
 }

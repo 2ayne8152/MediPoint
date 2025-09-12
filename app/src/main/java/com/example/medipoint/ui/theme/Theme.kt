@@ -1,6 +1,5 @@
 package com.example.medipoint.ui.theme
 
-import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -9,34 +8,44 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+// Light theme colors
+private val LightColorScheme = lightColorScheme(
+    primary = Color(0xFF00001A),          // Primary button color
+    onPrimary = Color.White,               // Text on primary
+    secondary = Color(0xFF0A0A1A),        // Accent
+    onSecondary = Color.White,
+    tertiary = Color(0xFFFF4081),         // Accent color
+    background = Color(0xFFF8F8FF),       // Background for screens
+    onBackground = Color(0xFF0A0A1A),     // Text on background
+    surface = Color.White,                 // Cards, etc.
+    onSurface = Color(0xFF0A0A1A),
+    surfaceVariant = Color(0xFFE0E0E0),   // Subtle surface
+    onSurfaceVariant = Color.Gray,
+    outline = Color.LightGray              // Borders, outlines
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
+// Dark theme colors
+private val DarkColorScheme = darkColorScheme(
+    primary = Color(0xFF0A0A1A),
     onPrimary = Color.White,
+    secondary = Color(0xFF1A1A2E),
     onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    tertiary = Color(0xFFFF4081),         // Accent color
+    background = Color(0xFF121212),
+    onBackground = Color.White,
+    surface = Color(0xFF1A1A2E),
+    onSurface = Color.White,
+    surfaceVariant = Color(0xFF2C2C3E),
+    onSurfaceVariant = Color.Gray,
+    outline = Color.Gray
 )
 
 @Composable
 fun MediPointTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
@@ -45,7 +54,6 @@ fun MediPointTheme(
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
