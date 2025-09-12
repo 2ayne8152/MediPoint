@@ -61,6 +61,8 @@ import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.collectAsState
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DividerDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.TextButton
 import com.example.medipoint.Data.MedicalInfoEntity
 import com.example.medipoint.Viewmodels.ProfileViewModel
@@ -236,15 +238,9 @@ fun ProfileCard(
     var editableUsername by remember { mutableStateOf(profile.displayName ?: "") }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(16.dp)
-            ),
+        modifier = Modifier.fillMaxWidth(), // REMOVE .border(...) from here
         elevation = CardDefaults.cardElevation(8.dp),
-        shape = MaterialTheme.shapes.medium,
+        shape = MaterialTheme.shapes.medium, // Or RoundedCornerShape(16.dp) if you prefer that specific radius consistently
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -272,7 +268,11 @@ fun ProfileCard(
                 }
             )
 
-            Divider(modifier = Modifier.padding(vertical = 12.dp))
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                thickness = DividerDefaults.Thickness,
+                color = DividerDefaults.color
+            )
 
             // Email (read-only)
             ProfileInfoItem(
@@ -282,7 +282,11 @@ fun ProfileCard(
                 isEditable = false
             )
 
-            Divider(modifier = Modifier.padding(vertical = 12.dp))
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 12.dp),
+                thickness = DividerDefaults.Thickness,
+                color = DividerDefaults.color
+            )
 
             // Phone Number (read-only, edited via dialog)
             ProfileInfoItem(
@@ -436,19 +440,13 @@ fun MedicalInfoCard(
     onEditClicked: () -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(16.dp)
-            ),
+        modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(8.dp),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
-    ) {
+    ){
         Column(modifier = Modifier.padding(20.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

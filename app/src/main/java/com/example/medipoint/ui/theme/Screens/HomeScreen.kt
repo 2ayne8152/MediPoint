@@ -37,21 +37,25 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.medipoint.R
 import com.example.medipoint.Viewmodels.BookingViewModel
-import com.google.firebase.auth.FirebaseAuth
+import com.example.medipoint.Viewmodels.ProfileViewModel
+
 
 @Composable
 fun HomeScreen(
     onBookAppointmentClick: () -> Unit,
     onDetailClick: (String) -> Unit,
     onViewAllClick: () -> Unit,
-    bookingViewModel: BookingViewModel = viewModel()
+    bookingViewModel: BookingViewModel = viewModel(),
+    profileViewModel: ProfileViewModel = viewModel()
 ) {
     // Collect appointments from the ViewModel
     val appointments by bookingViewModel.appointments.collectAsState()
+    val userProfileState by profileViewModel.userProfile.collectAsState() // This gets UserProfile?
+    val currentUserDisplayName = userProfileState?.displayName?.takeIf { it.isNotBlank() } ?: "User"
 
     // Start listening once when the screen enters
     LaunchedEffect(Unit) {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: "TEST_USER"
+//        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: "TEST_USER"
         bookingViewModel.startAppointmentsListener()
     }
 
@@ -63,7 +67,7 @@ fun HomeScreen(
     ) {
         // Greeting
         Text(
-            text = "Good morning, John",
+            text = "Good morning, $currentUserDisplayName", // Use the dynamic display name
             style = MaterialTheme.typography.headlineSmall
         )
         Text(

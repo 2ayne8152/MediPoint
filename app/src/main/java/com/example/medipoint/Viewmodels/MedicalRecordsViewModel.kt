@@ -82,6 +82,22 @@ class MedicalRecordsViewModel(
         PrescribedMedication("Ventolin Inhaler", "2 puffs", "As needed for wheezing"),
         PrescribedMedication("Losartan", "50mg", "Once daily")
     )
+    private val mockRecordTypes = listOf( // <--- Definition for mockRecordTypes
+        "Annual Check-up",
+        "Follow-up Visit",
+        "Specialist Consultation",
+        "Lab Test Review",
+        "Urgent Care"
+    )
+
+    private val mockDiagnoses = listOf( // <--- Definition for mockDiagnoses
+        "Common Cold",
+        "Seasonal Allergies",
+        "Hypertension Stage 1",
+        "Routine Physical Exam",
+        "Sprained Ankle",
+        "Type 2 Diabetes Mellitus"
+    )
 
     init {
         loadAllDataAndProcess()
@@ -96,6 +112,28 @@ class MedicalRecordsViewModel(
         _uniqueMedicationsCount.value = 0
         _recordTypeStats.value = emptyMap()
     }
+    private fun generateSimulatedMedicalRecords(userId: String, count: Int): List<MedicalRecord> {
+        val records = mutableListOf<MedicalRecord>()
+        repeat(count) {
+            val numberOfMeds = Random.nextInt(1, 4)
+            val selectedMeds = mockMedicationsList.shuffled().take(numberOfMeds) // Use predefinedMockMedications
+            records.add(
+                MedicalRecord(
+                    userId = userId,
+                    recordTitle = "Simulated Insight Record #${it + 1}",
+                    // dateOfService = ..., // Omit if not needed or handle as discussed
+                    recordType = mockRecordTypes.random(), // Use mockRecordTypes
+                    diagnosis = mockDiagnoses.random(),    // Use mockDiagnoses
+                    prescribedMedications = selectedMeds,
+                    reasonForVisit = "Simulated reason",
+                    treatmentPlan = "Simulated plan",
+                    issuingOrganization = "MediPoint Simulation Clinic"
+                )
+            )
+        }
+        return records
+    }
+
 
     private fun loadAllDataAndProcess() {
         val userId = FirebaseAuth.getInstance().currentUser?.uid
@@ -126,6 +164,10 @@ class MedicalRecordsViewModel(
                 _isLoading.value = false
             }
         )
+
+        val simulatedMedicalRecordsForMeds = generateSimulatedMedicalRecords(userId, 15) // Generate e.g., 15 simulated records
+        calculateMedicationInsights(simulatedMedicalRecordsForMeds) // Use these simulated records for med stats
+
 
         viewModelScope.launch {
             val medicalRecordsResult = medicalRecordRepository.getMedicalRecords(userId)
