@@ -50,6 +50,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.medipoint.Data.CheckInRecord
 import com.example.medipoint.R
+import com.example.medipoint.Repository.AlertsRepository
+import com.example.medipoint.Viewmodels.AlertViewModel
+import com.example.medipoint.Viewmodels.AlertViewModelFactory
 import com.example.medipoint.Viewmodels.CheckInViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.PermissionState
@@ -60,19 +63,21 @@ import com.google.accompanist.permissions.rememberPermissionState
 @Composable
 fun AppointmentDetailScreen(
     appointmentId: String,
-    viewModel: CheckInViewModel = viewModel(),
+    checkInViewModel: CheckInViewModel = viewModel(),
+    alertViewModelFactory: AlertViewModelFactory = AlertViewModelFactory(AlertsRepository()),
     navController: NavController
 ) {
-    val checkInRecord by viewModel.checkInRecord.collectAsState()
-    val appointment by viewModel.appointment.collectAsState()
-    val appointmentDateTime by viewModel.appointmentDateTime.collectAsState()
+    val alertViewModel: AlertViewModel = viewModel(factory = alertViewModelFactory)
+    val checkInRecord by checkInViewModel.checkInRecord.collectAsState()
+    val appointment by checkInViewModel.appointment.collectAsState()
+    val appointmentDateTime by checkInViewModel.appointmentDateTime.collectAsState()
     val context = LocalContext.current
 
     val locationPermission = rememberPermissionState(Manifest.permission.ACCESS_FINE_LOCATION)
 
     LaunchedEffect(appointmentId) {
-        viewModel.loadUserCheckInRecord(appointmentId)
-        viewModel.loadAppointmentDetails(appointmentId)
+        checkInViewModel.loadUserCheckInRecord(appointmentId)
+        checkInViewModel.loadAppointmentDetails(appointmentId)
     }
 
     Column(
@@ -131,7 +136,7 @@ fun AppointmentDetailScreen(
         CheckInCard(
             checkInRecord = checkInRecord ?: CheckInRecord(),
             appointmentId = appointmentId,
-            viewModel = viewModel,
+            viewModel = checkInViewModel,
             appointmentDateTime = appointmentDateTime
         )
 
@@ -198,7 +203,8 @@ fun AppointmentDetailScreen(
         if (checkInRecord?.checkedIn != true && appointment?.status == "Scheduled") {
             Button(
                 onClick = {
-                    viewModel.cancelAppointment(appointmentId)
+                    checkInViewModel.cancelAppointment(appointmentId)
+                    alertViewModel.cancelAlert(appointmentId)
                     Toast.makeText(context, "Appointment cancelled!", Toast.LENGTH_SHORT).show()
                     navController.popBackStack(route = "home", inclusive = false)
                 },

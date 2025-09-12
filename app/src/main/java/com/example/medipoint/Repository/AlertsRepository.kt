@@ -37,4 +37,25 @@ class AlertsRepository {
 
     // Generate a unique alert ID
     fun generateAlertId(): String = UUID.randomUUID().toString()
+
+    suspend fun cancelAlert(alertId: String): Result<Unit> {
+        return try {
+            // Deleting the alert from Firestore by its document ID
+            alertsCollection.document(alertId).delete().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Function to update the 'isRead' status in Firestore
+    suspend fun updateAlertStatus(alertId: String, isRead: Boolean): Result<Unit> {
+        return try {
+            val alertRef = alertsCollection.document(alertId)
+            alertRef.update("isRead", isRead).await() // Update the isRead field
+            Result.success(Unit) // Return success result
+        } catch (e: Exception) {
+            Result.failure(e) // Return failure if something goes wrong
+        }
+    }
 }

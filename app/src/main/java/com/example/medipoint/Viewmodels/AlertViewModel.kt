@@ -49,22 +49,50 @@ class AlertViewModel(
         }
     }
 
-    fun createAlertFromAppointment(
-        appointmentId: String,
-        doctorName: String,
-        appointmentDate: String,
-        userId: String
-    ) {
-        val alertId = if (appointmentId.isNotEmpty()) appointmentId else repository.generateAlertId()
-        val alert = Alerts(
-            id = alertId,
-            title = "Appointment Reminder",
-            message = "You have an appointment with Dr. $doctorName on $appointmentDate.",
-            date = appointmentDate,
-            userId = userId
-        )
-        saveAlert(alert)
+    // Cancel alert by ID
+    fun cancelAlert(alertId: String) {
+        viewModelScope.launch {
+            try {
+                val result = repository.cancelAlert(alertId)
+                if (result.isSuccess) {
+                    // Successfully deleted the alert, remove it from the local list
+                    _alerts.value = _alerts.value.filterNot { it.id == alertId }
+                } else {
+                    _error.value = result.exceptionOrNull()?.message
+                }
+            } catch (e: Exception) {
+                _error.value = e.message
+            }
+        }
     }
+
+    // Mark alert as read
+    fun onMarkAsRead(alertId: String) {
+        viewModelScope.launch {
+            try {
+                // Update the alert status locally first
+                val updatedAlerts = _alerts.value.map {
+                    if (it.id == alertId) {
+                        it.copy(isRead = true) // Mark the alert as read
+                    } else {
+                        it
+                    }
+                }
+                _alerts.value = updatedAlerts // Update the local state
+
+                // Also update the alert's status in Firestore
+                val result = repository.updateAlertStatus(alertId, true) // Persist in Firestore
+                if (result.isFailure) {
+                    // If Firestore update fails, reset the local state or show an error message
+                    _error.value = result.exceptionOrNull()?.message
+                }
+
+            } catch (e: Exception) {
+                _error.value = e.message // Handle exceptions
+            }
+        }
+    }
+
 }
 
 class AlertViewModelFactory(
