@@ -8,6 +8,7 @@ import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -101,7 +103,7 @@ fun AppointmentDetailScreen(
                 Spacer(modifier = Modifier.height(12.dp))
                 AppointmentInfoRow(Icons.Default.DateRange, "Date:", appointment?.date ?: "")
                 AppointmentInfoRow(Icons.Default.Settings, "Time:", appointment?.time ?: "")
-                AppointmentInfoRow(Icons.Default.Phone, "Contact Us:", "012-345678")
+                AppointmentInfoRowPhone(Icons.Default.Phone, "Contact Us:", "012-3456789")
                 Spacer(modifier = Modifier.height(8.dp))
                 Row (
                     modifier = Modifier.fillMaxWidth(),
@@ -221,6 +223,29 @@ fun AppointmentInfoRow(icon: ImageVector, text1: String, text2: String) {
         Text( text = "$text1 $text2", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
     }
 }
+@Composable
+fun AppointmentInfoRowPhone(
+    icon: ImageVector,
+    label: String,
+    phoneNumber: String
+) {
+    val context = LocalContext.current
+
+    Row(
+        modifier = Modifier
+            .clickable {
+                val intent = Intent(Intent.ACTION_DIAL).apply {
+                    data = Uri.parse("tel:$phoneNumber")
+                }
+                context.startActivity(intent)
+            }
+    ) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.size(8.dp))
+        Text(text = "$label $phoneNumber")
+    }
+}
+
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
