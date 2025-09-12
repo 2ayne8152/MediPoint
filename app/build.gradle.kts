@@ -61,7 +61,6 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
-    implementation(libs.androidx.compose.material)
 
     // Testing
     testImplementation(libs.junit)
@@ -74,8 +73,8 @@ dependencies {
 
     val room_version = "2.6.1"
     implementation("androidx.room:room-runtime:$room_version")
+    implementation("androidx.room:room-ktx:$room_version")
     ksp("androidx.room:room-compiler:$room_version")
-    implementation("androidx.room:room-ktx:$room_version") // <-- Add this line
 
 
 

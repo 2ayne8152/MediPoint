@@ -38,9 +38,10 @@ sealed class DistanceBannerUiState {
 }
 class CheckInViewModel(application: Application) : AndroidViewModel(application) {
 
+    // These are where the emulator is located at
     private val hospitalLat = 37.4219983
     private val hospitalLng = -122.084
-    private val checkInRadius = 200 // meters
+    private val checkInRadius = 200
 
     private val auth = FirebaseAuth.getInstance()
     private val fusedLocationClient =

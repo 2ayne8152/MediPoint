@@ -11,14 +11,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun SettingsScreen(
-    isDarkMode: MutableState<Boolean>,
+    isDarkMode: Boolean,
     onToggleTheme: (Boolean) -> Unit
 ) {
     Column(
@@ -34,15 +33,14 @@ fun SettingsScreen(
                 modifier = Modifier.padding(16.dp)
             ) {
                 Text(
-                    text = if (isDarkMode.value) "Dark Mode" else "Light Mode",
+                    text = if (isDarkMode) "Dark Mode" else "Light Mode",
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 Switch(
-                    checked = isDarkMode.value,
-                    onCheckedChange = {
-                        isDarkMode.value = it
-                        onToggleTheme(it)
+                    checked = isDarkMode,
+                    onCheckedChange = { newValue ->
+                        onToggleTheme(newValue)
                     }
                 )
             }

@@ -51,7 +51,7 @@ fun BookingScreen(
     viewModel: BookingViewModel = viewModel(
         factory = BookingViewModelFactory(
             appointmentRepository = AppointmentRepository(FirestoreAppointmentDao()),
-            alertsRepository = AlertsRepository() // Pass the correct context if needed
+            alertsRepository = AlertsRepository()
         )
     )
 ) {
@@ -70,6 +70,16 @@ fun BookingScreen(
 
     var selectedDate by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
+
+    val appointments by viewModel.appointments.collectAsState()
+
+    val allTimeSlots = listOf("09:00 AM", "10:30 AM", "02:00 PM", "04:00 PM")
+
+    val availableTimeSlots = remember(selectedDate, appointments) {
+        allTimeSlots.filter { time ->
+            appointments.none { it.date == selectedDate && it.time == time && (it.status == "Scheduled" || it.status == "Confirmed") }
+        }
+    }
 
     val isFormValid = selectedDoctor.isNotBlank() &&
             appointmentType.isNotBlank() &&
@@ -203,14 +213,18 @@ fun BookingScreen(
                     .fillMaxWidth()
             )
             ExposedDropdownMenu(expanded = expandedTime, onDismissRequest = { expandedTime = false }) {
-                listOf("09:00 AM", "10:30 AM", "02:00 PM", "04:00 PM").forEach { time ->
-                    DropdownMenuItem(
-                        text = { Text(time) },
-                        onClick = {
-                            preferredTime = time
-                            expandedTime = false
-                        }
-                    )
+                if (availableTimeSlots.isEmpty()) {
+                    DropdownMenuItem(text = { Text("No available slots") }, onClick = {})
+                } else {
+                    availableTimeSlots.forEach { time ->
+                        DropdownMenuItem(
+                            text = { Text(time) },
+                            onClick = {
+                                preferredTime = time
+                                expandedTime = false
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -270,34 +284,8 @@ private fun showAndroidDatePicker(
         calendar.get(Calendar.DAY_OF_MONTH)
     )
 
-    // Prevent selecting past dates and allow only dates 2 days after today
-    val twoDaysLater = Calendar.getInstance().apply {
-        add(Calendar.DAY_OF_YEAR, 2)
-    }
-    datePickerDialog.datePicker.minDate = twoDaysLater.timeInMillis
+    // Prevent selecting past dates
+    datePickerDialog.datePicker.minDate = System.currentTimeMillis() + 2 * 24 * 60 * 60 * 1000 //2 days
 
     datePickerDialog.show()
 }
-
-// Use for testing
-//private fun showAndroidDatePicker(
-//    context: Context,
-//    calendar: Calendar,
-//    onDateSelected: (String) -> Unit
-//) {
-//    val datePickerDialog = DatePickerDialog(
-//        context,
-//        { _, year, month, dayOfMonth ->
-//            onDateSelected("$dayOfMonth/${month + 1}/$year")
-//        },
-//        calendar.get(Calendar.YEAR),
-//        calendar.get(Calendar.MONTH),
-//        calendar.get(Calendar.DAY_OF_MONTH)
-//    )
-//
-//    // Prevent selecting past dates
-//    datePickerDialog.datePicker.minDate = System.currentTimeMillis() - 1000
-//
-//    datePickerDialog.show()
-//}
-
