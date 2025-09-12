@@ -6,9 +6,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.medipoint.Data.Appointment
 import com.example.medipoint.Data.CheckInRecord
+import com.example.medipoint.Data.FirestoreAppointmentDao
+import com.example.medipoint.Data.FirestoreCheckInDao
+import com.example.medipoint.Repository.AppointmentRepository
+import com.example.medipoint.Repository.CheckInRepository
 import com.google.android.gms.location.LocationServices
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -22,7 +25,6 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
     private val hospitalLng = -122.084
     private val checkInRadius = 200 // meters
 
-    private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
     private val fusedLocationClient =
         LocationServices.getFusedLocationProviderClient(application)
@@ -30,17 +32,18 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
     private val _checkInRecord = MutableStateFlow<CheckInRecord?>(null)
     val checkInRecord: StateFlow<CheckInRecord?> = _checkInRecord
 
-    // ⚡️ Appointment object from Firestore
     private val _appointment = MutableStateFlow<Appointment?>(null)
     val appointment: StateFlow<Appointment?> = _appointment
 
-    // ⚡️ Parsed appointment datetime in millis
     private val _appointmentDateTime = MutableStateFlow<Long?>(null)
     val appointmentDateTime: StateFlow<Long?> = _appointmentDateTime
 
-    /**
-     * Try to check in for a specific appointment (only once per user).
-     */
+    private val appointmentDao = FirestoreAppointmentDao()
+    private val appointmentRepository = AppointmentRepository(appointmentDao)
+
+    private val checkInDao = FirestoreCheckInDao()
+    private val checkInRepository = CheckInRepository(checkInDao)
+
     @SuppressLint("MissingPermission")
     fun attemptCheckIn(appointmentId: String) {
         val currentUser = auth.currentUser ?: return
@@ -48,161 +51,75 @@ class CheckInViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             try {
                 val location = fusedLocationClient.lastLocation.await()
-                if (location != null) {
+                val checkedIn = location?.let {
                     val distance = FloatArray(1)
                     android.location.Location.distanceBetween(
-                        location.latitude, location.longitude,
+                        it.latitude, it.longitude,
                         hospitalLat, hospitalLng,
                         distance
                     )
+                    distance[0] <= checkInRadius
+                } ?: false
 
-                    if (distance[0] <= checkInRadius) {
-                        val record = CheckInRecord(
-                            checkedIn = true,
-                            checkInTime = System.currentTimeMillis(),
-                            checkInLat = location.latitude,
-                            checkInLng = location.longitude,
-                            userId = currentUser.uid,
-                            appointmentId = appointmentId
-                        )
-                        saveCheckInRecord(appointmentId, record)
+                val record = CheckInRecord(
+                    checkedIn = checkedIn,
+                    checkInTime = if (checkedIn) System.currentTimeMillis() else null,
+                    checkInLat = if (checkedIn) location?.latitude else null,
+                    checkInLng = if (checkedIn) location?.longitude else null,
+                    userId = currentUser.uid,
+                    appointmentId = appointmentId
+                )
 
-                        updateAppointmentStatus(appointmentId, "Checked-In")
+                _checkInRecord.value = record
 
-                        _checkInRecord.value = record
-                    } else {
-                        _checkInRecord.value = CheckInRecord(checkedIn = false)
-                    }
-                } else {
-                    _checkInRecord.value = CheckInRecord(checkedIn = false)
+                if (checkedIn) {
+                    appointmentRepository.updateAppointmentStatus(appointmentId, "Checked-In")
+                    checkInRepository.addCheckInRecord(appointmentId, record)
                 }
+
             } catch (e: Exception) {
                 e.printStackTrace()
-                _checkInRecord.value = CheckInRecord(checkedIn = false)
+                _checkInRecord.value = CheckInRecord(
+                    checkedIn = false,
+                    userId = currentUser.uid,
+                    appointmentId = appointmentId
+                )
             }
         }
     }
 
-    fun updateAppointmentStatus(appointmentId: String, newStatus: String) {
+    fun cancelAppointment(appointmentId: String) {
         viewModelScope.launch {
-            try {
-                db.collection("appointments")
-                    .document(appointmentId)
-                    .update("status", newStatus)
-                    .addOnSuccessListener {
-                        android.util.Log.d("Firestore", "Appointment status updated to $newStatus")
-                    }
-                    .addOnFailureListener { e ->
-                        android.util.Log.e("Firestore", "Error updating status", e)
-                    }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
+            appointmentRepository.cancelAppointment(appointmentId)
         }
     }
 
-    fun autoUpdateAppointmentStatus(appointmentId: String, appointmentTime: Long, durationMinutes: Int = 30) {
-        val now = System.currentTimeMillis()
-        val appointmentEnd = appointmentTime + (durationMinutes * 60 * 1000)
-
-        if (now > appointmentEnd) {
-            updateAppointmentStatus(appointmentId, "Completed")
-        }
-    }
-
-    private fun saveCheckInRecord(appointmentId: String, record: CheckInRecord) {
-        val checkInRef = db.collection("appointments")
-            .document(appointmentId)
-            .collection("checkin")
-            .document(record.userId)
-
-        checkInRef.set(record)
-            .addOnSuccessListener {
-                android.util.Log.d("Firestore", "Check-in saved!")
-            }
-            .addOnFailureListener { e ->
-                android.util.Log.e("Firestore", "Error saving check-in", e)
-            }
-    }
-
-    fun loadUserCheckInRecord(appointmentId: String) {
-        val currentUser = auth.currentUser ?: return
-
-        db.collection("appointments")
-            .document(appointmentId)
-            .collection("checkin")
-            .document(currentUser.uid)
-            .get()
-            .addOnSuccessListener { document ->
-                if (document.exists()) {
-                    val record = document.toObject(CheckInRecord::class.java)
-                    _checkInRecord.value = record
-                } else {
-                    _checkInRecord.value = null
-                }
-            }
-            .addOnFailureListener { e ->
-                android.util.Log.e("Firestore", "Error loading check-in", e)
-                _checkInRecord.value = null
-            }
-    }
-
-    /**
-     * Load appointment details from Firestore and parse datetime.
-     */
     fun loadAppointmentDetails(appointmentId: String) {
         viewModelScope.launch {
-            try {
-                val snapshot = db.collection("appointments")
-                    .document(appointmentId)
-                    .get()
-                    .await()
+            val currentUser = auth.currentUser ?: return@launch
+            val result = appointmentRepository.getAppointments(currentUser.uid)
+            if (result.isSuccess) {
+                val appt = result.getOrNull()?.find { it.id == appointmentId }
+                _appointment.value = appt
 
-                if (snapshot.exists()) {
-                    val appt = snapshot.toObject(Appointment::class.java)
-                    _appointment.value = appt
-
-                    // ⚡ Parse date + time into timestamp
-                    if (appt?.date != null) {
-                        val sdf = SimpleDateFormat("d/M/yyyy hh:mm a", Locale.getDefault())
-                        try {
-                            val parsed = sdf.parse("${appt.date} ${appt.time}")
-                            val apptTime = parsed?.time
-                            _appointmentDateTime.value = apptTime
-
-                            if (apptTime != null && appt.status == "Scheduled") {
-                                val now = System.currentTimeMillis()
-                                if (now > apptTime) {
-                                    db.collection("appointments")
-                                        .document(appointmentId)
-                                        .update("status", "Missed")
-                                        .addOnSuccessListener {
-                                            android.util.Log.d("Firestore", "Status updated to Missed")
-                                        }
-                                        .addOnFailureListener { e ->
-                                            android.util.Log.e("Firestore", "Error updating status", e)
-                                        }
-                                }
-                            }
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                            _appointmentDateTime.value = null
-                        }
-                    } else {
-                        _appointmentDateTime.value = null
-                    }
-                } else {
-                    _appointment.value = null
-                    _appointmentDateTime.value = null
+                val sdf = SimpleDateFormat("d/M/yyyy hh:mm a", Locale.getDefault())
+                _appointmentDateTime.value = appt?.let {
+                    try { sdf.parse("${it.date} ${it.time}")?.time } catch (e: Exception){ null }
                 }
-            } catch (e: Exception) {
-                e.printStackTrace()
+            } else {
                 _appointment.value = null
                 _appointmentDateTime.value = null
             }
         }
     }
 
+    fun loadUserCheckInRecord(appointmentId: String) {
+        val currentUser = auth.currentUser ?: return
+        viewModelScope.launch {
+            val result = checkInRepository.getCheckInRecord(appointmentId, currentUser.uid)
+            _checkInRecord.value = result.getOrNull()
+        }
+    }
 
     fun setCheckInRecord(record: CheckInRecord?) {
         _checkInRecord.value = record

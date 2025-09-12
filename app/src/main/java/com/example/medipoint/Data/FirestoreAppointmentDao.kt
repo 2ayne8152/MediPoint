@@ -11,7 +11,6 @@ class FirestoreAppointmentDao(
 
     override suspend fun addAppointment(appointment: Appointment): Result<Appointment> {
         return try {
-            // Check if appointment already exists for same doctor/date/time
             val existing = db.collection("appointments")
                 .whereEqualTo("doctorName", appointment.doctorName)
                 .whereEqualTo("date", appointment.date)
@@ -19,25 +18,9 @@ class FirestoreAppointmentDao(
                 .get()
                 .await()
 
-            if (!existing.isEmpty) {
-                return Result.failure(Exception("This doctor already has an appointment at that time."))
-            }
+            if (!existing.isEmpty) return Result.failure(Exception("Doctor already has appointment at this time"))
 
-            // Add appointment
-            val map = hashMapOf(
-                "doctorName" to appointment.doctorName,
-                "appointmentType" to appointment.appointmentType,
-                "date" to appointment.date,
-                "time" to appointment.time,
-                "status" to appointment.status,
-                "notes" to appointment.notes,
-                "userId" to appointment.userId
-            )
-
-            // Save and grab Firestore document ID
-            val docRef = db.collection("appointments").add(map).await()
-
-            // Return a **new copy** with Firestore id
+            val docRef = db.collection("appointments").add(appointment).await()
             Result.success(appointment.copy(id = docRef.id))
         } catch (e: Exception) {
             Result.failure(e)
@@ -63,24 +46,41 @@ class FirestoreAppointmentDao(
         onDataChange: (List<Appointment>) -> Unit,
         onError: (Exception) -> Unit
     ): ListenerRegistration {
-       return db.collection("appointments")
+        return db.collection("appointments")
             .whereEqualTo("userId", userId)
             .addSnapshotListener { snapshot, e ->
-                if (e != null) {
-                    onError(e)
-                    return@addSnapshotListener
-                }
+                if (e != null) { onError(e); return@addSnapshotListener }
                 val appointments = snapshot?.documents?.mapNotNull { it.toAppointment() } ?: emptyList()
                 onDataChange(appointments)
             }
     }
 
+    override suspend fun updateAppointmentStatus(appointmentId: String, status: String): Result<Unit> {
+        return try {
+            db.collection("appointments").document(appointmentId)
+                .update("status", status)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun cancelAppointment(appointmentId: String): Result<Unit> {
+        return try {
+            db.collection("appointments").document(appointmentId)
+                .update("status", "Cancelled")
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
 
 private fun DocumentSnapshot.toAppointment(): Appointment? {
     return try {
-        val appointment = this.toObject(Appointment::class.java)
-        appointment?.copy(id = this.id) // override with Firestore doc id
+        this.toObject(Appointment::class.java)?.copy(id = this.id)
     } catch (e: Exception) {
         null
     }
